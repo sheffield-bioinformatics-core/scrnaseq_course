@@ -1,0 +1,211 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(tidyverse)
+```
+
+```{r}
+sampleSheet <- readr::read_tsv("sample_sheet.tsv")
+dirs <- filter(sampleSheet,DatasetName == "Caron") %>%  
+               pull(SampleName)
+dirs
+```
+
+```{r}
+seurat_data <- Read10X(data.dir = "ETV6-RUNX1_1")
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "ETV6-RUNX1_1")
+```
+
+```{r}
+dirs <- dirs[-1]
+seurat_list <- NULL
+# Create a Seurat object for each sample
+for (i in 1:length(dirs)){
+        message(paste("Reading data from ", dirs[i]))
+        seurat_data <- Read10X(data.dir = dirs[i])
+        seurat_list[[i]] <- CreateSeuratObject(counts = seurat_data, 
+                                         min.features = 100, 
+                                         project = dirs[i])
+        
+}
+
+merged_data <- merge(x = seurat_obj,y=seurat_list)
+
+```
+
+
+
+```{r}
+merged_data[["mito.ratio"]] <- PercentageFeatureSet(merged_data, pattern="^MT")/100
+merged_data@meta.data
+```
+
+
+```{r}
+qc_data <- merged_data@meta.data %>% 
+  data.frame %>% 
+  left_join(sampleSheet, by = c("orig.ident"="SampleName")) %>% 
+  rename(SampleName = orig.ident) %>% 
+  rename(nUMI = nCount_RNA, nGene=nFeature_RNA)
+
+View(qc_data)
+```
+
+
+## Number of cells per-sample
+
+```{r}
+qc_data %>% 
+  ggplot(aes(x = SampleName, fill=SampleGroup)) + geom_bar() + theme(axis.text.x = element_text(angle=45,vjust=1,hjust=1))
+```
+## UMI counts per cell
+
+```{r}
+qc_data %>% 
+  ggplot(aes( x= nUMI,fill=SampleName)) + geom_density(alpha=0.2) + scale_x_log10()
+```
+
+## Genes detected per cell
+
+```{r}
+qc_data %>% 
+  ggplot(aes( x= nGene,fill=SampleName)) + geom_density(alpha=0.2)
+```
+
+
+## Complexity
+
+Look at the relationship between the number of UMI and number of genes detected. Should be somewhat correlated
+
+```{r}
+ggplot(qc_data, aes(x = log10(nUMI), y= log10(nGene))) + geom_point() + geom_smooth(method="lm") + facet_wrap(~SampleName)
+```
+
+Define novelty score and add to the qc data
+
+```{r}
+qc_data <- mutate(qc_data, Novelty = log10(nGene) / log10(nUMI))
+
+ggplot(qc_data, aes(x = log10(nUMI), y= log10(nGene),col=Novelty)) + geom_point() + facet_wrap(~SampleName)
+
+```
+
+
+## Mitochondrial counts
+
+```{r}
+qc_data %>% 
+  ggplot(aes(x = mito.ratio, fill=SampleName)) + geom_density(alpha=0.2) + facet_wrap(~SampleGroup) + geom_vline(xintercept = 0.2)
+```
+
+## Considering multiple QC metrics
+
+```{r}
+qc_data %>% 
+  ggplot(aes(x = nUMI, y = nGene, col=mito.ratio)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
+```
+
+```{r}
+qc_data %>% 
+  ggplot(aes(x = nUMI, y = nGene, col=Novelty)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
+```
+
+
+```{r}
+qc_data %>% 
+  mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
+  count(kept_in_analysis)
+```
+
+```{r}
+qc_data %>% 
+  mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
+  ggplot(aes(x = nUMI, y = nGene, col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
+```
+
+```{r}
+merged_data$nGene <- merged_data$nFeature_RNA
+merged_data$nUMI <- merged_data$nCount_RNA
+merged_data$Novelty <- log10(merged_data$nFeature_RNA) / log10(merged_data$nCount_RNA)
+
+
+filtered_data <- subset(x = merged_data, 
+                         subset= (nUMI >= 500) & 
+                           (nGene >= 250) & 
+                           (Novelty > 0.80) & 
+                           (mito.ratio < 0.20))
+dim(filtered_data)
+```
+
+
+## Count filtering
+
+```{r}
+# Extract counts
+counts <- GetAssayData(object = merged_data, slot = "counts")
+
+# Output a logical matrix specifying for each gene on whether or not there are more than zero counts per cell
+nonzero <- counts > 0
+
+```
+
+```{r}
+# Sums all TRUE values and returns TRUE if more than 10 TRUE values per gene
+keep_genes <- Matrix::rowSums(nonzero) >= 10
+
+# Only keeping those genes expressed in more than 10 cells
+filtered_counts <- counts[keep_genes, ]
+
+filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
+```
+
+```{r}
+cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
+s_genes <- cc_genes[1:43]
+g2m_genes <- cc_genes[44:97]
+```
+
+```{r}
+data_phase <- NormalizeData(filtered_data)
+seurat_phase <- CellCycleScoring(data_phase, 
+                                 g2m.features = g2m_genes, 
+                                 s.features = s_genes)
+
+# View cell cycle scores and phases assigned to cells                                 
+View(seurat_phase@meta.data)  
+```
+
+```{r}
+# Identify the most variable genes
+seurat_phase <- FindVariableFeatures(seurat_phase, 
+                     selection.method = "vst",
+                     nfeatures = 2000, 
+                     verbose = FALSE)
+		     
+# Scale the counts
+seurat_phase <- ScaleData(seurat_phase)
+```
+
+```{r}
+# Perform PCA
+seurat_phase <- RunPCA(seurat_phase)
+
+# Plot the PCA colored by cell cycle phase
+DimPlot(seurat_phase,
+        reduction = "pca",
+        group.by= "Phase")
+```
+
+```{r}
+seurat_phase@meta.data %>% 
+  data.frame %>% 
+  left_join(sampleSheet, by = c("orig.ident"= "SampleName")) %>% 
+  ggplot(aes(x = SampleGroup, y = S.Score)) + geom_violin()
+```
+
