@@ -9,34 +9,39 @@ library(tidyverse)
 ```
 
 ```{r}
-sampleSheet <- readr::read_tsv("sample_sheet.tsv")
-dirs <- filter(sampleSheet,DatasetName == "Caron") %>%  
-               pull(SampleName)
-dirs
+sampleSheet <- read.delim("GSE132509/meta_data.tsv")
+sampleSheet
 ```
 
 ```{r}
-seurat_data <- Read10X(data.dir = "ETV6-RUNX1_1")
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872434")
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
                                  min.features = 100, 
                                  project = "ETV6-RUNX1_1")
 ```
 
 ```{r}
-dirs <- dirs[-1]
+dirs <- slice(sampleSheet, c(2:4,9:11)) %>% 
+        pull(GSE)
+
+samples <- slice(sampleSheet, c(2:4,9:11)) %>% 
+        pull(SampleName)
 seurat_list <- NULL
+
 # Create a Seurat object for each sample
 for (i in 1:length(dirs)){
         message(paste("Reading data from ", dirs[i]))
-        seurat_data <- Read10X(data.dir = dirs[i])
+        seurat_data <- Read10X(data.dir = paste0("GSE132509/",dirs[i]))
         seurat_list[[i]] <- CreateSeuratObject(counts = seurat_data, 
                                          min.features = 100, 
-                                         project = dirs[i])
+                                         project = samples[i])
         
 }
 
 merged_data <- merge(x = seurat_obj,y=seurat_list)
-
+rm(seurat_list)
+rm(seurat_data)
+rm(seurat_obj)
 ```
 
 
@@ -130,10 +135,12 @@ qc_data %>%
 ```
 
 ```{r}
-merged_data$nGene <- merged_data$nFeature_RNA
-merged_data$nUMI <- merged_data$nCount_RNA
-merged_data$Novelty <- log10(merged_data$nFeature_RNA) / log10(merged_data$nCount_RNA)
+### Put the new meta data we've created into the Seurat object
 
+qc_data <- data.frame(qc_data)
+rownames(qc_data) <- rownames(merged_data@meta.data)
+
+merged_data <- AddMetaData(merged_data, qc_data)
 
 filtered_data <- subset(x = merged_data, 
                          subset= (nUMI >= 500) & 
@@ -141,6 +148,7 @@ filtered_data <- subset(x = merged_data,
                            (Novelty > 0.80) & 
                            (mito.ratio < 0.20))
 dim(filtered_data)
+rm(merged_data)
 ```
 
 
@@ -148,7 +156,7 @@ dim(filtered_data)
 
 ```{r}
 # Extract counts
-counts <- GetAssayData(object = merged_data, slot = "counts")
+counts <- GetAssayData(object = filtered_data, slot = "counts")
 
 # Output a logical matrix specifying for each gene on whether or not there are more than zero counts per cell
 nonzero <- counts > 0
@@ -165,6 +173,8 @@ filtered_counts <- counts[keep_genes, ]
 filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
 ```
 
+# Sources of Variation
+
 ```{r}
 cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
 s_genes <- cc_genes[1:43]
@@ -172,14 +182,17 @@ g2m_genes <- cc_genes[44:97]
 ```
 
 ```{r}
-data_phase <- NormalizeData(filtered_data)
-seurat_phase <- CellCycleScoring(data_phase, 
+filtered_data <- NormalizeData(filtered_data)
+seurat_phase <- CellCycleScoring(filtered_data, 
                                  g2m.features = g2m_genes, 
                                  s.features = s_genes)
 
 # View cell cycle scores and phases assigned to cells                                 
 View(seurat_phase@meta.data)  
 ```
+
+
+
 
 ```{r}
 # Identify the most variable genes
@@ -198,14 +211,41 @@ seurat_phase <- RunPCA(seurat_phase)
 
 # Plot the PCA colored by cell cycle phase
 DimPlot(seurat_phase,
-        reduction = "pca",
-        group.by= "Phase")
+        reduction = "pca",group.by = "Phase")
 ```
 
 ```{r}
-seurat_phase@meta.data %>% 
-  data.frame %>% 
-  left_join(sampleSheet, by = c("orig.ident"= "SampleName")) %>% 
-  ggplot(aes(x = SampleGroup, y = S.Score)) + geom_violin()
+summary(seurat_phase$mito.ratio)
+seurat_phase$mito.cat <- cut(seurat_phase$mito.ratio, breaks=c(-Inf,0.02971, 0.03951,0.05186,Inf),labels=c("Low","Medium","Medium High","High"))
+
+DimPlot(seurat_phase,
+        reduction = "pca",
+        group.by= "SampleGroup")
+
+```
+
+
+
+```{r message=FALSE}
+seurat_split <- SplitObject(seurat_phase, split.by = "SampleGroup")
+
+for(i in 1:length(seurat_split)){
+  
+  seurat_split[[i]] <- SCTransform(seurat_split[[i]],vars.to.regress = c("mito.ratio","nUMI","S.Score","G2M.Score") )
+}
+
+```
+
+```{r}
+integ_features <- SelectIntegrationFeatures(object.list = seurat_split, nfeatures = 3000)
+seurat_split <- PrepSCTIntegration(object.list = seurat_split, anchor.features = integ_features)
+```
+
+```{r}
+integ_anchors <- FindIntegrationAnchors(object.list = seurat_split, 
+                                        normalization.method = "SCT",
+                                        anchor.features = integ_features)
+
+seurat_integrated <- IntegrateData(anchorset = integ_anchors,normalization.method = "SCT")
 ```
 
