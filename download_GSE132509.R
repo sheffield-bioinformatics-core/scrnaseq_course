@@ -1,5 +1,7 @@
 library(GEOquery)
 library(tidyverse)
+
+dir.create("GSE132509",showWarnings = FALSE)
 geo <- getGEO("GSE132509")[[1]]
 pData(geo) %>% 
   select(GSE = geo_accession, SampleName = title, SampleGroup = source_name_ch1, Disease = characteristics_ch1) %>% 
