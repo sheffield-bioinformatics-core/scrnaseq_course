@@ -3,24 +3,100 @@ title: "R Notebook"
 output: html_notebook
 ---
 
+# Introduction
+
+In this workshop we will be using the dataset:-
+
+> Caron M, St-Onge P, Sontag T, Wang YC et al. Single-cell analysis of childhood leukemia reveals a link between developmental states and ribosomal protein expression as a source of intra-individual heterogeneity. Sci Rep 2020 May 15;10(1):8079
+
+The *processed* single-cell data have been made available on Gene Expression Omnibus (GEO) and we have downloaded them for you. For more information, the GEO entry is [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132509) and the code to download is given in the R script [download_GSE132509.R](download_GSE132509.R).
+
+*We will only analyse a subset of the dataset during the practical*.
+
 ```{r}
 library(Seurat)
 library(tidyverse)
 ```
+
+# Data Import
+
+We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). The sampleSheet data frame contains information about each of the samples in the dataset; which GEO accession they correspond to and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
 sampleSheet
 ```
 
+## Code to import a single biological sample
+
+The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in a specified directory. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
+
+```{r}
+list.files("GSE132509/GSM3872434/")
+```
+
+It is then a two-step process to create a object that `Seurat` can use for analysis.
+
 ```{r}
 seurat_data <- Read10X(data.dir = "GSE132509/GSM3872434")
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
                                  min.features = 100, 
                                  project = "ETV6-RUNX1_1")
+seurat_obj
 ```
 
+Note that the "samples" referred to in the output are individual cells that have been sequenced. We can inspect the data that we have just imported. The counts can be displayed, although most of them will be empty due to the *sparse* nature of single-cell data.
+
 ```{r}
+GetAssayData(seurat_obj, "counts")[1:10,1:2]
+```
+
+The "meta-data" in the object is used to record any QA data that we generated; used to filter any poor-quality cells from the dataset. We will see how to add to this data frame later.
+
+```{r}
+seurat_obj@meta.data %>% head
+
+
+```
+
+## 
+
+```{r}
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872442")
+seurat_obj2 <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "PBMMC_1")
+seurat_obj2
+merged_data <- merge(x = seurat_obj,y=seurat_obj2)
+```
+
+
+
+## Importing many samples
+
+We will now employ a "for loop" to process the remainder of the samples. In programming, looping is a strategy for repeating same lines of code but for a set of different inputs. To see why this is beneficial, lets look at the code for importing the second and third samples in our dataset:-
+
+```{r eval=FALSE}
+## No need to run this code!
+## It is just for an example
+
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872435")
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "ETV6-RUNX1_2")
+seurat_obj
+
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872436")
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "ETV6-RUNX1_3")
+seurat_obj
+```
+
+The only 
+
+
+```{r eval=FALSE}
 dirs <- slice(sampleSheet, c(2:4,9:11)) %>% 
         pull(GSE)
 
@@ -39,11 +115,15 @@ for (i in 1:length(dirs)){
 }
 
 merged_data <- merge(x = seurat_obj,y=seurat_list)
+
+```
+
+```{r}
 rm(seurat_list)
 rm(seurat_data)
 rm(seurat_obj)
+gc()
 ```
-
 
 
 ```{r}
