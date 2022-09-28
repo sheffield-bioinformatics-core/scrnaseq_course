@@ -17,9 +17,20 @@ In this workshop we will be using the dataset:-
 
 > Caron M, St-Onge P, Sontag T, Wang YC et al. Single-cell analysis of childhood leukemia reveals a link between developmental states and ribosomal protein expression as a source of intra-individual heterogeneity. Sci Rep 2020 May 15;10(1):8079
 
-The *processed* single-cell data have been made available on Gene Expression Omnibus (GEO) and we have downloaded them for you. For more information, the GEO entry is [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132509) and the code to download is given in the R script [download_GSE132509.R](download_GSE132509.R).
+The materials are based on materials kindly-shared by Harvard Bioinformatics Core and Cancer Research Uk Cambridge Institute
+
+- [Harvard Bioinformatics Core](https://hbctraining.github.io/scRNA-seq_online/)
+- [Cancer Research Uk](https://bioinformatics-core-shared-training.github.io/Bitesize_SingleCell/)
+
+The *processed* single-cell data for this study have been made available on Gene Expression Omnibus (GEO), and we have downloaded them for you and re-organised the data into folders. For more information, the GEO entry is [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132509) and the code to download is given in the R script [download_GSE132509.R](download_GSE132509.R).
 
 *We will only analyse a subset of the dataset during the practical*.
+
+<div class="information">
+Much of the code and information presented in this workshop is *exploratory* rather than describing a strict workflow that must always be followed. In particular, the some of the cut-offs and parameters used **may not be appropriate for your own dataset**. 
+</div>
+
+The two packages we are going to use are `Seurat` and `tidyverse`; which you should already have installed.
 
 ```{r}
 library(Seurat)
@@ -28,7 +39,7 @@ library(tidyverse)
 
 # Data Import
 
-We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). The sampleSheet data frame contains information about each of the samples in the dataset; which GEO accession they correspond to and the disease status of the sample.
+We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). The sampleSheet data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
@@ -37,7 +48,7 @@ sampleSheet
 
 ## Code to import a single biological sample
 
-The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in a specified directory. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
+The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in adirectory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
 
 ```{r}
 list.files("GSE132509/GSM3872434/")
@@ -53,18 +64,19 @@ seurat_obj <- CreateSeuratObject(counts = seurat_data,
 seurat_obj
 ```
 
-Note that the "samples" referred to in the output are individual cells that have been sequenced. We can inspect the data that we have just imported. The counts can be displayed, although most of them will be empty due to the *sparse* nature of single-cell data.
+Note that the "samples" referred to in the output are individual cells that have been sequenced. We can inspect the data that we have just imported and display the counts;, although most of them will be empty due to the *sparse* nature of single-cell data.
+
+Note that we tend to look at summaries or plots of the data rather than the raw counts themselves. This is just to explain what the object that we have just created contains.
 
 ```{r}
+## each row is a gene, each column is a sample
 GetAssayData(seurat_obj, "counts")[1:10,1:2]
 ```
 
-The "meta-data" in the object is used to record any QA data that we generated; used to filter any poor-quality cells from the dataset. We will see how to add to this data frame later.
+The "meta-data" in the object is used to record any QA data that we generate or other grouping information related to the samples (cells). We will see how to add to this data frame later. For now it contains the number of UMI (`nCount_RNA`) and genes (`nFeature_RNA`) detected in each cell.
 
 ```{r}
 seurat_obj@meta.data %>% head
-
-
 ```
 ## Importing many samples using a `for` loop
 
@@ -101,7 +113,8 @@ The only changes required to import the data from a different biological sample 
 
 We could manually create code chunks to read the entire set of samples in the same manner. This might be feasible for a few samples, but probably involve some copying and pasting and be prone to errors.
 
-We can start constructing the `for` loop re-writing the code chunk using *variables* in place of the the directory name and project name
+We can start constructing the `for` loop re-writing the code chunk using *variables* in place of the the directory name and project name. This is the only part of the code chunk that is specific to a particular sample.
+
 ```{r eval=FALSE}
 seurat_data <- Read10X(data.dir = the_data_dir)
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
@@ -109,7 +122,7 @@ seurat_obj <- CreateSeuratObject(counts = seurat_data,
                                  project = project_name)
 ```
 
-If we want to read the data for a particular sample, all that is required is to set the values of `the_data_dir` and `project_name` appropriately.
+If we want to read the data for a particular sample, all that is required is to set the values of `the_data_dir` and `project_name` appropriately, and run the rest of the code.
 
 ```{r eval=FALSE}
 the_data_dir <- "GSE132509/GSM3872435"
@@ -134,12 +147,31 @@ samples <- slice(sampleSheet, c(2:4,9:11)) %>%
         pull(SampleName)
 ```
 
-We can now "loop" over the `dirs` variable. This will use a indexed value of `dirs` starting at 1 until all values of `dirs` have been processed. At each *iteration* of the loop we can find out the current value of `dirs` and `samples` using `dirs[i]` and `samples[i]` respectively.
+```{r}
+dirs
+samples
+```
+Both `dirs` and `samples` are examples of a vector data type in R. If we want to know the item in the 1st of second element of `dirs` we can do
 
-Unlike the previous code chunk we save the result of each `CreateSeuratObject` call to a `list` variable.
+```{r}
+dirs[1]
+dirs[2]
+```
+
+The value inside the `[]` can itself be a variable rather than a number
+
+```{r}
+i <- 1
+dirs[i]
+```
+
+
+We "loop" over the `dirs` variable. This will use a indexed value of `dirs` starting at 1 until all values of `dirs` have been processed. At each *iteration* of the loop we can find out the current value of `dirs` and `samples` using `dirs[i]` and `samples[i]` respectively.
+
+However, the previous code would over-write the Seurat object at each iteration. The solution is to use a `list` 
 
 ```{r warning=FALSE}
-
+## create an empty list to store the seurat objects.
 seurat_list <- NULL
 
 # Create a Seurat object for each sample
@@ -173,9 +205,15 @@ rm(seurat_data)
 rm(seurat_obj)
 gc()
 ```
+We can save this object to disk so we don't have to repeat this step
 
 ```{r}
-saveRDS(merged_data, file = "merged_data.RDS")
+dir.create("Robjects",showWarnings = FALSE)
+saveRDS(merged_data, file = "Robjects/merged_data.RDS")
+```
+
+```{r eval=FALSE}
+merged_data <- readRDS("Robjects/merged_data.RDS")
 ```
 
 
@@ -186,17 +224,35 @@ saveRDS(merged_data, file = "merged_data.RDS")
 #### Exercise
 <div class="exercise">
 - Review the code used to read all the samples and make sure that you understand all parts
-- Verify that the `merged_data` object
+- Inspect the meta data for the merged object and verify that the `merged_data` object contains data from multiple samples. Which samples have the most and least cells sequenced?
 </div>
 
-## Quality control
+
+
+
+### Quality control
+
+As with other high-throughput dataset, **QC is an important part of the workflow and should not be overlooked**. Whilst it is difficult to give hard cut-offs that will work for all experiments, the `ggplot2` and `dplyr` packages provide convenient infrastructure for generating QC summaries and plots. You can re-use the code presented here on your own data, but you will have to interpret the results and use your judgement. Furthermore, the QC process is a delicate balance between retaining as many high quality cells as possible and removing as many true poor quality cells as possible. 
+
+In order to remove or reduce the impact of poor-quality data on our downstream analysis we will attempt to filter using some QC metrics. The three principle means of doing this are to apply thresholds for inclusion on three characteristics:
+
+- Cells with small library sizes are considered to be of low quality as the RNA has not been efficiently captured
+- The number of expressed genes in each cell defined as the number of genes with non-zero counts for that cell; any cell with very few expressed genes is likely to be of poor quality as the diverse transcript population has not been successfully `captured. 
+-  The proportion of UMIs mapped to genes in the mitochondrial genome; high proportions are indicative of poor-quality cells, possibly because of loss of cytoplasmic RNA from perforated cells (the reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane).
+
+Prior to performing QC, you should have a good idea what type of cells you expect to find. Do you expect low complexity cells or cells with high mitochondrial expression levels in your sample, for instance? We must then take this biology into account when assessing the quality of our data.
+
+The meta data stored in the merged data already contain some useful information about QC. We can add further to this by calculating the percentage of a particular set of genes that are expressed. A common use-case for this is Mitochondrial genes that can be indicative of cells under stress. The `PercentageFeatureSet` function can be used and makes use of a *regular expression* to identify the genes we are interested in. 
 
 
 ```{r}
+## we look for genes that start with MT
+## this will work for human genes
 merged_data[["mito.ratio"]] <- PercentageFeatureSet(merged_data, pattern="^MT")/100
 merged_data@meta.data
 ```
 
+The meta data can also include information about our sample grouping (which we already have in our `sampleSheet` object). The `left_join` function can be used to create a single data frame to hold all the information about our samples. At this point we also do some re-naming which will helping with data interpretation.
 
 ```{r}
 qc_data <- merged_data@meta.data %>% 
@@ -204,41 +260,67 @@ qc_data <- merged_data@meta.data %>%
   left_join(sampleSheet, by = c("orig.ident"="SampleName")) %>% 
   rename(SampleName = orig.ident) %>% 
   rename(nUMI = nCount_RNA, nGene=nFeature_RNA)
+```
 
+
+```{r eval=FALSE}
 View(qc_data)
 ```
 
 
-## Number of cells per-sample
+### Number of cells per-sample
+
+The number of cells for each sample can be informative- especially if we have some idea about how many cells to expect as part of the experimental protocol. We can make a barplot using a `geom_bar`. Using the `SampleName` as our `x` aesthetic will automatically put the number of occurences of that name on the y aesthetic. Since the sample group information is contained in the `qc_data` data frame we can also colour by the `SampleGroup` to see if there is any underlying difference.
 
 ```{r}
 qc_data %>% 
   ggplot(aes(x = SampleName, fill=SampleGroup)) + geom_bar() + theme(axis.text.x = element_text(angle=45,vjust=1,hjust=1))
 ```
-## UMI counts per cell
+
+There is clearly some variation between samples, and possibly the number of cells in *PBMMC* samples is a bit lower. The number of cells does not tell the whole story, as we would rather not exclude all the data for a particular sample. Instead we would rather identify which cells from this sample are usuable for analysis. For this we can look at the number of UMI and genes (and the relationship between these).
+
+### UMI and gene counts per cell
+
+To recap, from our `qc_data` we have the `uMI` for each cell and the `nGene` metric. We also know which sample each cell originated from. Using the `ggplot2` interface we can translate these quantities into a plot to visualise the distributions of `nUMI` and `nGene` on a per-sample basis. Thus we can see what a typical number of *UMI* and *genes* is for a sample.
+
+A typical way to representing distributions is using a violin plot. We can choose to apply a log$_{10}$ transformation to the `nUMI` values to make them easier to compare.
 
 ```{r}
 qc_data %>% 
-  ggplot(aes( x= nUMI,fill=SampleName)) + geom_density(alpha=0.2) + scale_x_log10()
+  ggplot(aes(x = nUMI,y = SampleName,fill = SampleGroup)) + geom_violin() + scale_x_log10() 
 ```
 
-## Genes detected per cell
+An equivalent plot for `nGene` can be produced by changing the `x` aesthetic.
 
 ```{r}
 qc_data %>% 
-  ggplot(aes( x= nGene,fill=SampleName)) + geom_density(alpha=0.2)
+  ggplot(aes(x = nGene,y = SampleName,fill = SampleGroup)) + geom_violin() + scale_x_log10() 
 ```
 
-
-## Complexity
-
-Look at the relationship between the number of UMI and number of genes detected. Should be somewhat correlated
+Along with these graphical representations we can also produce numeric summaries:-
 
 ```{r}
-ggplot(qc_data, aes(x = log10(nUMI), y= log10(nGene))) + geom_point() + geom_smooth(method="lm") + facet_wrap(~SampleName)
+qc_data %>% 
+  group_by(SampleName) %>% 
+  summarise_if(is.numeric, median)
 ```
 
-Define novelty score and add to the qc data
+
+### Complexity
+
+We can now look at the relationship between the number of UMI and number of genes detected; which we would hope to be somewhat correlated.
+
+<div class="exercise">
+**Exercise:** Make a plot to compare the `nUMI` and `nGene` values for each sample. See below for an example
+</div>
+
+![](images/uMI_vs_gene.png)
+
+```{r}
+
+```
+
+We would ideally like each cell to be measuring as many genes as possible. Cells that measure a few highly-expressed genes will not be very useful to us. We can define a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. Any cells that are candidates to be removed will be exhibiting a low novely score. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
 
 ```{r}
 qc_data <- mutate(qc_data, Novelty = log10(nGene) / log10(nUMI))
@@ -247,12 +329,15 @@ ggplot(qc_data, aes(x = log10(nUMI), y= log10(nGene),col=Novelty)) + geom_point(
 
 ```
 
+By colouring the plot by this new score we seem to highlight any outlier points. However, exactly where to drawn the line and exclude cells is not completely clear. We still have another piece of information to consider, which is the number of mitochondrial genes. Recall that we want to remove any cells where this percentage is quite high. 
 
 ## Mitochondrial counts
 
+The code to visualise the distribution of mitochondrial counts is highly similar to that to visualise the `nUMI` and `nGene`.
+
 ```{r}
 qc_data %>% 
-  ggplot(aes(x = mito.ratio, fill=SampleName)) + geom_density(alpha=0.2) + facet_wrap(~SampleGroup) + geom_vline(xintercept = 0.2)
+  ggplot(aes(x=mito.ratio,y = SampleName)) + geom_violin() 
 ```
 
 ## Considering multiple QC metrics
