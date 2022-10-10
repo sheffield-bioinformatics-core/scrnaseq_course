@@ -382,6 +382,12 @@ dim(filtered_data)
 rm(merged_data)
 ```
 
+Save the Seurat data as an R object again
+
+```{r}
+saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
+```
+
 
 ## Count filtering
 
@@ -479,4 +485,10 @@ integ_anchors <- FindIntegrationAnchors(object.list = seurat_split,
 
 seurat_integrated <- IntegrateData(anchorset = integ_anchors,normalization.method = "SCT")
 ```
+
+Save the Seurat data as an R object again
+```{r}
+saveRDS(seurat_integrated, file = "Robjects/seurat_integrated.RDS")
+```
+
 
