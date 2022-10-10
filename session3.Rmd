@@ -1,0 +1,23 @@
+---
+title: "Analysis of Single-Cell RNA-seq - Session 3"
+author: "Emily V Chambers"
+date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
+output: 
+  html_notebook: 
+    toc: yes
+    toc_float: yes
+    css: stylesheets/styles.css
+---
+<img src="images/logo-sm.png" style="position:absolute;top:40px;right:10px;" width="200" />
+
+
+# Introduction
+
+
+We will load up the two packages we have used previously.
+
+```{r}
+library(Seurat)
+library(tidyverse)
+```
+
