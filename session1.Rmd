@@ -449,7 +449,7 @@ seurat_obj <- CreateSeuratObject(counts = seurat_data,
 
 The next stage is to define which samples we want to use as possible inputs to the code chunk above. To keep the data manageable we will concentrate on either `ETV6-RUNX1` or `PBMMC` samples.
 
-```{r}
+```{r eval=FALSE}
 ## slice can be used to select particular rows from a data frame
 dirs <- slice(sampleSheet, c(2:4,9:11)) %>% 
         pull(GSE)
@@ -458,20 +458,20 @@ samples <- slice(sampleSheet, c(2:4,9:11)) %>%
         pull(SampleName)
 ```
 
-```{r}
+```{r eval=FALSE}
 dirs
 samples
 ```
 Both `dirs` and `samples` are examples of a vector data type in R. If we want to know the item in the 1st of second element of `dirs` we can do
 
-```{r}
+```{r eval=FALSE}
 dirs[1]
 dirs[2]
 ```
 
 The value inside the `[]` can itself be a variable rather than a number
 
-```{r}
+```{r eval=FALSE}
 i <- 1
 dirs[i]
 ```
@@ -481,7 +481,7 @@ We "loop" over the `dirs` variable. This will use a indexed value of `dirs` star
 
 However, the previous code would over-write the Seurat object at each iteration. The solution is to use a `list` 
 
-```{r warning=FALSE}
+```{r warning=FALSE,eval=FALSE}
 ## create an empty list to store the seurat objects.
 seurat_list <- NULL
 
@@ -504,13 +504,13 @@ for (i in 1:length(dirs)){
 
 The `merge` function that we saw previously can now be used to combine all the datasets into a single object. The second argument, `y`, can be a `list` of `Seurat` objects.
 
-```{r}
+```{r eval=FALSE}
 merged_data <- merge(x = seurat_obj,y=seurat_list)
 ```
 
 We will now work with the merged dataset, so no longer require the `seurat_obj` and `seurat_data` corresponding to particular samples. These objects are using some of the memory available to RStudio, so we can delete them.
 
-```{r}
+```{r eval=FALSE}
 rm(seurat_list)
 rm(seurat_data)
 rm(seurat_obj)
@@ -518,7 +518,7 @@ gc()
 ```
 We can save this object to disk so we don't have to repeat this step
 
-```{r}
+```{r eval=FALSE}
 dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
 ```
