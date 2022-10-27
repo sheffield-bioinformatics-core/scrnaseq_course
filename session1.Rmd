@@ -87,8 +87,8 @@ seurat_obj@meta.data %>% head
 
 #### Exercise
 <div class="exercise">
-- Review the code used to read all the samples and make sure that you understand all parts
-- Inspect the meta data for the merged object and verify that the `merged_data` object contains data from multiple samples. Which samples have the most and least cells sequenced?
+- Use to sampleSheet to determine the directory containing data from the first healthy individual (`PBMMC_1`).
+- Use the `Read10X` and `CreateSeuratObject` functions to import the data from this sample, and save as a new variable (`seurat_obj2` for example)
 </div>
 
 ```{r}
@@ -98,16 +98,26 @@ seurat_obj2 <- CreateSeuratObject(counts = seurat_data,
                                  project = "PBMMC_1")
 seurat_obj2
 
-merged_data <- merge(seurat_obj,seurat_obj2)
+
 ```
 
+We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means creating a single counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can 
 
-```{r}
+```{r eval=FALSE}
+merged_data <- merge(seurat_obj,seurat_obj2)
+## create a directory to store the Robjects
 dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
 ```
 
+```{r eval=FALSE}
+merged_data <- readRDS("Robjects/merged_data.RDS")
+```
 
+
+<div class="information">
+If you have more than two samples in your dataset, you might want to take a more efficient approach to reading the data. An example is given at the end of this section.
+</div>
 
 ### Quality control
 
@@ -123,6 +133,10 @@ Prior to performing QC, you should have a good idea what type of cells you expec
 
 The meta data stored in the merged data already contain some useful information about QC. We can add further to this by calculating the percentage of a particular set of genes that are expressed. A common use-case for this is Mitochondrial genes that can be indicative of cells under stress. The `PercentageFeatureSet` function can be used and makes use of a *regular expression* to identify the genes we are interested in. 
 
+
+<div class="information">
+The regular expression used here assumes that our Mitochondrial genes start with "MT". If this is not the case for your own data then you will need to modify the `pattern` argument in the below code.
+</div>
 
 ```{r}
 ## we look for genes that start with MT
@@ -195,9 +209,6 @@ We can now look at the relationship between the number of UMI and number of gene
 
 ![](images/uMI_vs_gene.png)
 
-```{r}
-
-```
 
 We would ideally like each cell to be measuring as many genes as possible. Cells that measure a few highly-expressed genes will not be very useful to us. We can define a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. Any cells that are candidates to be removed will be exhibiting a low novely score. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
 
@@ -221,15 +232,8 @@ qc_data %>%
 
 ## Considering multiple QC metrics
 
-```{r}
-qc_data %>% 
-  ggplot(aes(x = nUMI, y = nGene, col=mito.ratio)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
-```
 
-```{r}
-qc_data %>% 
-  ggplot(aes(x = nUMI, y = nGene, col=Novelty)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
-```
+
 
 
 ```{r}
