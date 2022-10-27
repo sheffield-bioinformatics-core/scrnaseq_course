@@ -233,8 +233,14 @@ qc_data %>%
 ## Considering multiple QC metrics
 
 
+Based on the QC we have generated, we decide on the following criteria for *keeping* a cell in the analysis
 
+- `nUMI > 500`
+- `nGene > 250`
+- `Novelty > 0.8`
+- `mito.ratio < 0.2`
 
+We can now add an extra column to the `qc_data` to indicate whether a cell would be retained given these criteria.
 
 ```{r}
 qc_data %>% 
@@ -242,11 +248,15 @@ qc_data %>%
   count(kept_in_analysis)
 ```
 
+We can also overlay this information on the plot of `nUMI` vs `nGene` to see if we have been sucessful in removing most of the outlier points.
+
 ```{r}
 qc_data %>% 
   mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
-  ggplot(aes(x = nUMI, y = nGene, col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
+  ggplot(aes(x = log10(nUMI), y = log10(nGene), col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName)
 ```
+
+The plot and table above we useful for visualisation purposes, and once we are happy we can proceed to filter our cells. This requires us to modify the data stored in the Seurat object and then use the `subset` function.
 
 ```{r}
 ### Put the new meta data we've created into the Seurat object
@@ -272,7 +282,7 @@ saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
 ```
 
 
-## Count filtering
+## Gene filtering
 
 ```{r}
 # Extract counts
