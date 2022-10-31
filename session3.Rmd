@@ -17,7 +17,13 @@ output:
 We will load up the two packages we have used previously.
 
 ```{r}
-library(Seurat)
-library(tidyverse)
+library(Seurat, quietly = T)
+library(tidyverse, quietly = T)
 ```
+
+And then we can load up the R objects we have used in the previous sessions
+```{r}
+seurat <- readRDS("Robjects/seurat_integrated.RDS")
+```
+
 
