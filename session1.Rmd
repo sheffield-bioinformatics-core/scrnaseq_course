@@ -78,136 +78,34 @@ The "meta-data" in the object is used to record any QA data that we generate or 
 ```{r}
 seurat_obj@meta.data %>% head
 ```
-## Importing many samples using a `for` loop
 
-Since our dataset comprises multiple samples, we need a way to import all the data and create a single Seurat object for analysis. The `Read10X` and `CreateSeuratObject` functions are designed to import the data from a single directory and create a corresponding Seurat object. To deal with multiple directories and samples we have to read them separately and use the `merge` function to join the datasets together.
 
-```{r eval=FALSE}
-## DON'T RUN THIS CODE
-merged_data <- merge(x = seurat_obj,y=seurat_obj2)
-```
 
-**But how do we read data from multiple directories?** We will employ a "for loop" to process the remainder of the samples. In programming, looping is a strategy for repeating same lines of code but for a set of different inputs. To see why this is beneficial, lets look at the code for importing the second and third samples in our dataset:-
+******
+******
+******
 
-```{r eval=FALSE}
-## No need to run this code!
-## It is just for an example
+#### Exercise
+<div class="exercise">
+- Use to sampleSheet to determine the directory containing data from the first healthy individual (`PBMMC_1`).
+- Use the `Read10X` and `CreateSeuratObject` functions to import the data from this sample, and save as a new variable (`seurat_obj2` for example)
+</div>
 
-seurat_data <- Read10X(data.dir = "GSE132509/GSM3872435")
-seurat_obj <- CreateSeuratObject(counts = seurat_data, 
-                                 min.features = 100, 
-                                 project = "ETV6-RUNX1_2")
-seurat_obj2
-
-merged_data <- merge(x = seurat_obj,y=seurat_obj2)
-
-seurat_data <- Read10X(data.dir = "GSE132509/GSM3872436")
+```{r}
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872442")
 seurat_obj2 <- CreateSeuratObject(counts = seurat_data, 
                                  min.features = 100, 
-                                 project = "ETV6-RUNX1_3")
-seurat_obj <- merged_data <- merge(x = seurat_obj,y=seurat_obj2)
+                                 project = "PBMMC_1")
+seurat_obj2
+
 
 ```
 
-The only changes required to import the data from a different biological sample are; 1) the directory name containing the raw data 2) the name assigned to the object.
-
-We could manually create code chunks to read the entire set of samples in the same manner. This might be feasible for a few samples, but probably involve some copying and pasting and be prone to errors.
-
-We can start constructing the `for` loop re-writing the code chunk using *variables* in place of the the directory name and project name. This is the only part of the code chunk that is specific to a particular sample.
+We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means creating a single counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can 
 
 ```{r eval=FALSE}
-seurat_data <- Read10X(data.dir = the_data_dir)
-seurat_obj <- CreateSeuratObject(counts = seurat_data, 
-                                 min.features = 100, 
-                                 project = project_name)
-```
-
-If we want to read the data for a particular sample, all that is required is to set the values of `the_data_dir` and `project_name` appropriately, and run the rest of the code.
-
-```{r eval=FALSE}
-the_data_dir <- "GSE132509/GSM3872435"
-project_name <- "ETV6-RUNX1_2"
-
-seurat_data <- Read10X(data.dir = the_data_dir)
-seurat_obj <- CreateSeuratObject(counts = seurat_data, 
-                                 min.features = 100, 
-                                 project = project_name)
-
-```
-
-
-The next stage is to define which samples we want to use as possible inputs to the code chunk above. To keep the data manageable we will concentrate on either `ETV6-RUNX1` or `PBMMC` samples.
-
-```{r}
-## slice can be used to select particular rows from a data frame
-dirs <- slice(sampleSheet, c(2:4,9:11)) %>% 
-        pull(GSE)
-
-samples <- slice(sampleSheet, c(2:4,9:11)) %>% 
-        pull(SampleName)
-```
-
-```{r}
-dirs
-samples
-```
-Both `dirs` and `samples` are examples of a vector data type in R. If we want to know the item in the 1st of second element of `dirs` we can do
-
-```{r}
-dirs[1]
-dirs[2]
-```
-
-The value inside the `[]` can itself be a variable rather than a number
-
-```{r}
-i <- 1
-dirs[i]
-```
-
-
-We "loop" over the `dirs` variable. This will use a indexed value of `dirs` starting at 1 until all values of `dirs` have been processed. At each *iteration* of the loop we can find out the current value of `dirs` and `samples` using `dirs[i]` and `samples[i]` respectively.
-
-However, the previous code would over-write the Seurat object at each iteration. The solution is to use a `list` 
-
-```{r warning=FALSE}
-## create an empty list to store the seurat objects.
-seurat_list <- NULL
-
-# Create a Seurat object for each sample
-for (i in 1:length(dirs)){
-        the_data_dir <- dirs[i]
-        project_name <- samples[i]
-        
-        message(paste("Reading data from ", dirs[i]))
-        ## paste0 used to create the relative path to the data directory
-        seurat_data <- Read10X(data.dir = paste0("GSE132509/",the_data_dir))
-        seurat_list[[i]] <- CreateSeuratObject(counts = seurat_data, 
-                                         min.features = 100, 
-                                         project = project_name)
-        
-}
-
-
-```
-
-The `merge` function that we saw previously can now be used to combine all the datasets into a single object. The second argument, `y`, can be a `list` of `Seurat` objects.
-
-```{r}
-merged_data <- merge(x = seurat_obj,y=seurat_list)
-```
-
-We will now work with the merged dataset, so no longer require the `seurat_obj` and `seurat_data` corresponding to particular samples. These objects are using some of the memory available to RStudio, so we can delete them.
-
-```{r}
-rm(seurat_list)
-rm(seurat_data)
-rm(seurat_obj)
-gc()
-```
-We can save this object to disk so we don't have to repeat this step
-
-```{r}
+merged_data <- merge(seurat_obj,seurat_obj2)
+## create a directory to store the Robjects
 dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
 ```
@@ -217,18 +115,9 @@ merged_data <- readRDS("Robjects/merged_data.RDS")
 ```
 
 
-******
-******
-******
-
-#### Exercise
-<div class="exercise">
-- Review the code used to read all the samples and make sure that you understand all parts
-- Inspect the meta data for the merged object and verify that the `merged_data` object contains data from multiple samples. Which samples have the most and least cells sequenced?
+<div class="information">
+If you have more than two samples in your dataset, you might want to take a more efficient approach to reading the data. An example is given at the end of this section.
 </div>
-
-
-
 
 ### Quality control
 
@@ -244,6 +133,10 @@ Prior to performing QC, you should have a good idea what type of cells you expec
 
 The meta data stored in the merged data already contain some useful information about QC. We can add further to this by calculating the percentage of a particular set of genes that are expressed. A common use-case for this is Mitochondrial genes that can be indicative of cells under stress. The `PercentageFeatureSet` function can be used and makes use of a *regular expression* to identify the genes we are interested in. 
 
+
+<div class="information">
+The regular expression used here assumes that our Mitochondrial genes start with "MT". If this is not the case for your own data then you will need to modify the `pattern` argument in the below code.
+</div>
 
 ```{r}
 ## we look for genes that start with MT
@@ -316,9 +209,6 @@ We can now look at the relationship between the number of UMI and number of gene
 
 ![](images/uMI_vs_gene.png)
 
-```{r}
-
-```
 
 We would ideally like each cell to be measuring as many genes as possible. Cells that measure a few highly-expressed genes will not be very useful to us. We can define a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. Any cells that are candidates to be removed will be exhibiting a low novely score. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
 
@@ -342,16 +232,15 @@ qc_data %>%
 
 ## Considering multiple QC metrics
 
-```{r}
-qc_data %>% 
-  ggplot(aes(x = nUMI, y = nGene, col=mito.ratio)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
-```
 
-```{r}
-qc_data %>% 
-  ggplot(aes(x = nUMI, y = nGene, col=Novelty)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
-```
+Based on the QC we have generated, we decide on the following criteria for *keeping* a cell in the analysis
 
+- `nUMI > 500`
+- `nGene > 250`
+- `Novelty > 0.8`
+- `mito.ratio < 0.2`
+
+We can now add an extra column to the `qc_data` to indicate whether a cell would be retained given these criteria.
 
 ```{r}
 qc_data %>% 
@@ -359,11 +248,15 @@ qc_data %>%
   count(kept_in_analysis)
 ```
 
+We can also overlay this information on the plot of `nUMI` vs `nGene` to see if we have been sucessful in removing most of the outlier points.
+
 ```{r}
 qc_data %>% 
   mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
-  ggplot(aes(x = nUMI, y = nGene, col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName) + geom_vline(xintercept = 500) + geom_hline(yintercept = 250)
+  ggplot(aes(x = log10(nUMI), y = log10(nGene), col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName)
 ```
+
+The plot and table above we useful for visualisation purposes, and once we are happy we can proceed to filter our cells. This requires us to modify the data stored in the Seurat object and then use the `subset` function.
 
 ```{r}
 ### Put the new meta data we've created into the Seurat object
@@ -382,8 +275,14 @@ dim(filtered_data)
 rm(merged_data)
 ```
 
+Save the Seurat data as an R object again
 
-## Count filtering
+```{r}
+saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
+```
+
+
+## Gene filtering
 
 ```{r}
 # Extract counts
@@ -480,3 +379,150 @@ integ_anchors <- FindIntegrationAnchors(object.list = seurat_split,
 seurat_integrated <- IntegrateData(anchorset = integ_anchors,normalization.method = "SCT")
 ```
 
+Save the Seurat data as an R object again
+```{r}
+saveRDS(seurat_integrated, file = "Robjects/seurat_integrated.RDS")
+```
+
+
+
+
+# Appendix 
+
+## Importing many samples using a `for` loop
+
+Since our dataset comprises multiple samples, we need a way to import all the data and create a single Seurat object for analysis. The `Read10X` and `CreateSeuratObject` functions are designed to import the data from a single directory and create a corresponding Seurat object. To deal with multiple directories and samples we have to read them separately and use the `merge` function to join the datasets together.
+
+```{r eval=FALSE}
+## DON'T RUN THIS CODE
+merged_data <- merge(x = seurat_obj,y=seurat_obj2)
+```
+
+**But how do we read data from multiple directories?** We will employ a "for loop" to process the remainder of the samples. In programming, looping is a strategy for repeating same lines of code but for a set of different inputs. To see why this is beneficial, lets look at the code for importing the second and third samples in our dataset:-
+
+```{r eval=FALSE}
+## No need to run this code!
+## It is just for an example
+
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872435")
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "ETV6-RUNX1_2")
+seurat_obj2
+
+merged_data <- merge(x = seurat_obj,y=seurat_obj2)
+
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872436")
+seurat_obj2 <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = "ETV6-RUNX1_3")
+seurat_obj <- merged_data <- merge(x = seurat_obj,y=seurat_obj2)
+
+```
+
+The only changes required to import the data from a different biological sample are; 1) the directory name containing the raw data 2) the name assigned to the object.
+
+We could manually create code chunks to read the entire set of samples in the same manner. This might be feasible for a few samples, but probably involve some copying and pasting and be prone to errors.
+
+We can start constructing the `for` loop re-writing the code chunk using *variables* in place of the the directory name and project name. This is the only part of the code chunk that is specific to a particular sample.
+
+```{r eval=FALSE}
+seurat_data <- Read10X(data.dir = the_data_dir)
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = project_name)
+```
+
+If we want to read the data for a particular sample, all that is required is to set the values of `the_data_dir` and `project_name` appropriately, and run the rest of the code.
+
+```{r eval=FALSE}
+the_data_dir <- "GSE132509/GSM3872435"
+project_name <- "ETV6-RUNX1_2"
+
+seurat_data <- Read10X(data.dir = the_data_dir)
+seurat_obj <- CreateSeuratObject(counts = seurat_data, 
+                                 min.features = 100, 
+                                 project = project_name)
+
+```
+
+
+The next stage is to define which samples we want to use as possible inputs to the code chunk above. To keep the data manageable we will concentrate on either `ETV6-RUNX1` or `PBMMC` samples.
+
+```{r eval=FALSE}
+## slice can be used to select particular rows from a data frame
+dirs <- slice(sampleSheet, c(2:4,9:11)) %>% 
+        pull(GSE)
+
+samples <- slice(sampleSheet, c(2:4,9:11)) %>% 
+        pull(SampleName)
+```
+
+```{r eval=FALSE}
+dirs
+samples
+```
+Both `dirs` and `samples` are examples of a vector data type in R. If we want to know the item in the 1st of second element of `dirs` we can do
+
+```{r eval=FALSE}
+dirs[1]
+dirs[2]
+```
+
+The value inside the `[]` can itself be a variable rather than a number
+
+```{r eval=FALSE}
+i <- 1
+dirs[i]
+```
+
+
+We "loop" over the `dirs` variable. This will use a indexed value of `dirs` starting at 1 until all values of `dirs` have been processed. At each *iteration* of the loop we can find out the current value of `dirs` and `samples` using `dirs[i]` and `samples[i]` respectively.
+
+However, the previous code would over-write the Seurat object at each iteration. The solution is to use a `list` 
+
+```{r warning=FALSE,eval=FALSE}
+## create an empty list to store the seurat objects.
+seurat_list <- NULL
+
+# Create a Seurat object for each sample
+for (i in 1:length(dirs)){
+        the_data_dir <- dirs[i]
+        project_name <- samples[i]
+        
+        message(paste("Reading data from ", dirs[i]))
+        ## paste0 used to create the relative path to the data directory
+        seurat_data <- Read10X(data.dir = paste0("GSE132509/",the_data_dir))
+        seurat_list[[i]] <- CreateSeuratObject(counts = seurat_data, 
+                                         min.features = 100, 
+                                         project = project_name)
+        
+}
+
+
+```
+
+The `merge` function that we saw previously can now be used to combine all the datasets into a single object. The second argument, `y`, can be a `list` of `Seurat` objects.
+
+```{r eval=FALSE}
+merged_data <- merge(x = seurat_obj,y=seurat_list)
+```
+
+We will now work with the merged dataset, so no longer require the `seurat_obj` and `seurat_data` corresponding to particular samples. These objects are using some of the memory available to RStudio, so we can delete them.
+
+```{r eval=FALSE}
+rm(seurat_list)
+rm(seurat_data)
+rm(seurat_obj)
+gc()
+```
+We can save this object to disk so we don't have to repeat this step
+
+```{r eval=FALSE}
+dir.create("Robjects",showWarnings = FALSE)
+saveRDS(merged_data, file = "Robjects/merged_data.RDS")
+```
+
+```{r eval=FALSE}
+merged_data <- readRDS("Robjects/merged_data.RDS")
+```
