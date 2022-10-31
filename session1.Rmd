@@ -284,6 +284,10 @@ saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
 
 ## Gene filtering
 
+- Single-cell data is *sparse*
+- We want to remove genes with lots of 0 values
+- Will impact normalisation
+
 ```{r}
 # Extract counts
 counts <- GetAssayData(object = filtered_data, slot = "counts")
@@ -303,13 +307,24 @@ filtered_counts <- counts[keep_genes, ]
 filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
 ```
 
+
+
 # Sources of Variation
 
+- Goal is to identify clusters that show interesting biological variation between cells.
+- Differences in sequencing depth is common to bulk seq
+- Cell cycle is often influential
+- Can identify cell cycle status using a few key genes
+
+
 ```{r}
+## can load these directly from Seurat?
 cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
 s_genes <- cc_genes[1:43]
 g2m_genes <- cc_genes[44:97]
 ```
+
+Do a rough normalization first (we will re-do later) and determine states.
 
 ```{r}
 filtered_data <- NormalizeData(filtered_data)
@@ -322,7 +337,7 @@ View(seurat_phase@meta.data)
 ```
 
 
-
+Find features that define clusters
 
 ```{r}
 # Identify the most variable genes
@@ -335,6 +350,8 @@ seurat_phase <- FindVariableFeatures(seurat_phase,
 seurat_phase <- ScaleData(seurat_phase)
 ```
 
+We do a PCA (more later...) to check if cell-cycle could be driving the clusters
+
 ```{r}
 # Perform PCA
 seurat_phase <- RunPCA(seurat_phase)
@@ -344,17 +361,24 @@ DimPlot(seurat_phase,
         reduction = "pca",group.by = "Phase")
 ```
 
+
+Looks like different cell cycle genes are present in different clusters.
+
+Mitochondrial genes can also affect clusters. 
+
 ```{r}
 summary(seurat_phase$mito.ratio)
-seurat_phase$mito.cat <- cut(seurat_phase$mito.ratio, breaks=c(-Inf,0.02971, 0.03951,0.05186,Inf),labels=c("Low","Medium","Medium High","High"))
+seurat_phase$mito.cat <- cut(seurat_phase$mito.ratio, breaks=c(-Inf,0.029551  , 0.046656 ,0.062690 ,Inf),labels=c("Low","Medium","Medium High","High"))
 
 DimPlot(seurat_phase,
         reduction = "pca",
-        group.by= "SampleGroup")
+        group.by= "mito.cat")
 
 ```
 
+Mitochondrial ratio also a factor.
 
+We decide to regress for mitochondrial ratio, number of UMI and cell-cycle status.
 
 ```{r message=FALSE}
 seurat_split <- SplitObject(seurat_phase, split.by = "SampleGroup")
