@@ -309,106 +309,11 @@ filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@m
 
 
 
-# Sources of Variation
-
-- Goal is to identify clusters that show interesting biological variation between cells.
-- Differences in sequencing depth is common to bulk seq
-- Cell cycle is often influential
-- Can identify cell cycle status using a few key genes
 
 
 ```{r}
-## can load these directly from Seurat?
-cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
-s_genes <- cc_genes[1:43]
-g2m_genes <- cc_genes[44:97]
+saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
 ```
-
-Do a rough normalization first (we will re-do later) and determine states.
-
-```{r}
-filtered_data <- NormalizeData(filtered_data)
-seurat_phase <- CellCycleScoring(filtered_data, 
-                                 g2m.features = g2m_genes, 
-                                 s.features = s_genes)
-
-# View cell cycle scores and phases assigned to cells                                 
-View(seurat_phase@meta.data)  
-```
-
-
-Find features that define clusters
-
-```{r}
-# Identify the most variable genes
-seurat_phase <- FindVariableFeatures(seurat_phase, 
-                     selection.method = "vst",
-                     nfeatures = 2000, 
-                     verbose = FALSE)
-		     
-# Scale the counts
-seurat_phase <- ScaleData(seurat_phase)
-```
-
-We do a PCA (more later...) to check if cell-cycle could be driving the clusters
-
-```{r}
-# Perform PCA
-seurat_phase <- RunPCA(seurat_phase)
-
-# Plot the PCA colored by cell cycle phase
-DimPlot(seurat_phase,
-        reduction = "pca",group.by = "Phase")
-```
-
-
-Looks like different cell cycle genes are present in different clusters.
-
-Mitochondrial genes can also affect clusters. 
-
-```{r}
-summary(seurat_phase$mito.ratio)
-seurat_phase$mito.cat <- cut(seurat_phase$mito.ratio, breaks=c(-Inf,0.029551  , 0.046656 ,0.062690 ,Inf),labels=c("Low","Medium","Medium High","High"))
-
-DimPlot(seurat_phase,
-        reduction = "pca",
-        group.by= "mito.cat")
-
-```
-
-Mitochondrial ratio also a factor.
-
-We decide to regress for mitochondrial ratio, number of UMI and cell-cycle status.
-
-```{r message=FALSE}
-seurat_split <- SplitObject(seurat_phase, split.by = "SampleGroup")
-
-for(i in 1:length(seurat_split)){
-  
-  seurat_split[[i]] <- SCTransform(seurat_split[[i]],vars.to.regress = c("mito.ratio","nUMI","S.Score","G2M.Score") )
-}
-
-```
-
-```{r}
-integ_features <- SelectIntegrationFeatures(object.list = seurat_split, nfeatures = 3000)
-seurat_split <- PrepSCTIntegration(object.list = seurat_split, anchor.features = integ_features)
-```
-
-```{r}
-integ_anchors <- FindIntegrationAnchors(object.list = seurat_split, 
-                                        normalization.method = "SCT",
-                                        anchor.features = integ_features)
-
-seurat_integrated <- IntegrateData(anchorset = integ_anchors,normalization.method = "SCT")
-```
-
-Save the Seurat data as an R object again
-```{r}
-saveRDS(seurat_integrated, file = "Robjects/seurat_integrated.RDS")
-```
-
-
 
 
 # Appendix 
