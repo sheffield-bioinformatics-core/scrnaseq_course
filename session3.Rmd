@@ -13,17 +13,116 @@ output:
 
 # Introduction
 
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. The next step is to make biological sense ouf our clusters by identifying differentially expressed genes and assigning cell types. We can then carring out gene enrichment analysis and pathways analysis. 
 
-We will load up the two packages we have used previously.
+![](images/sc_workflow.png)
 
-```{r}
+Picture swiped from from https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/sessionIV/lessons/SC_clustering_analysis.html
+
+Firstly, we will load up the two packages we have used previously.
+
+```{r, warning=FALSE}
 library(Seurat, quietly = T)
 library(tidyverse, quietly = T)
 ```
 
-And then we can load up the R objects we have used in the previous sessions
+And then we can load up the R objects we have used in the previous sessions.
 ```{r}
 seurat <- readRDS("Robjects/seurat_integrated.RDS")
 ```
 
+```{r, eval=FALSE, echo=F}
+seurat <- RunPCA(object = seurat)
+seurat <- FindNeighbors(object = seurat)
+seurat <- FindClusters(object = seurat)
+seurat <- RunTSNE(object = seurat)
+seurat <- RunUMAP(object = seurat, dims = 1:20)
+```
+
+```{r}
+DimPlot(seurat)
+```
+
+
+# Find differentially expressed genes
+
+In Seurat we can find the top differentailly expressed genes, or markers, in within each cluster. `FindMarkers()` find marker genes within a particular cluster, `FindfAllMarkers()` find markers genes across all clusters. 
+
+To start with we can find all the markers in cluster 7. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
+
+```{r, echo=TRUE, results='hide'}
+
+# We make sure the default assay is set back to "RNA" to use the original counts for DE analysis.
+DefaultAssay(seurat) <- "RNA"
+
+
+cluster5.markers <- FindMarkers(seurat, ident.1 = 5, min.pct  = 0.25)
+cluster5.markers %>% head
+```
+
+A little  bit of table manipulation makes the markers easier to view...
+
+```{r, results='hide'}
+cluster5.markers  %>% select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
+```
+Perhaps we are most interested in the differentially expressed genes between clusters 1 and 3
+
+```{r, results='hide'}
+cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = 3, min.pct = 0.25)
+cluster1.markers %>% head()
+
+# or the DE genes between clusters 1 and 3 and 4?
+
+cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = c(3,4), min.pct = 0.25)
+cluster1.markers %>% head()
+```
+
+Usually, we are wanting to find the most differentially expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. This time we will only report the positively expressed markers with a minimum log fold change of 0.25.
+
+```{r, results='hide'}
+markers <- FindAllMarkers(seurat, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+markers %>%
+  select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
+    group_by(cluster) %>%
+    slice_max(n = 5, order_by = avg_log2FC)
+```
+
+
+# Find conserved markers across conditions
+
+The function `FindConservedMarkers` allows us to identify canonical cell type marker genes that are conserved across conditions. This will be useful in our integrated dataset to find cell type markers that do not change across the condition (disease/normal)
+
+```{r, results='hide'}
+
+# We can check out metadata to make sure we know what variable our condition information is in. In this dataset it is 'Disease'
+
+seurat@meta.data %>% head
+
+
+conserved6_markers <- FindConservedMarkers(seurat, ident.1 = 6, grouping.var = "Disease", verbose = FALSE)
+head(conserved6_markers)
+
+```
+
+
+
+```{r, results='hide'}
+markers.to.plot <- c()
+for(i in 0:11){
+ markers.to.plot<-  FindConservedMarkers(seurat, ident.1 = i, grouping.var = "Disease") %>% rownames_to_column("gene") %>% top_n(n = 2) %>% select(gene) %>% bind_rows(markers.to.plot)
+}
+
+markers.to.plot <- distinct(markers.to.plot)
+markers.to.plot
+DotPlot(seurat, features = markers.to.plot$gene, cols = c("blue", "red"), dot.scale = 8, split.by = "Disease") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+```
+
+And of course, we now what to find the opposite case - which genes are differentially expressed within a cluster but across conditions.
+
+# Find differential expressed genes across conditions
+
+```{r}
+
+```
 
