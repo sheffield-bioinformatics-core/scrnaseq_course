@@ -15,7 +15,7 @@ output:
 
 To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. The next step is to make biological sense ouf our clusters by identifying differentially expressed genes and assigning cell types. We can then carring out gene enrichment analysis and pathways analysis. 
 
-![](images/sc_workflow.png)
+![](images/flowchart2.png)
 
 Picture swiped from from https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/sessionIV/lessons/SC_clustering_analysis.html
 
@@ -40,15 +40,15 @@ seurat <- RunUMAP(object = seurat, dims = 1:20)
 ```
 
 ```{r}
-DimPlot(seurat)
+DimPlot(seurat, split.by = "Disease")
 ```
 
 
 # Find differentially expressed genes
 
-In Seurat we can find the top differentailly expressed genes, or markers, in within each cluster. `FindMarkers()` find marker genes within a particular cluster, `FindfAllMarkers()` find markers genes across all clusters. 
+In Seurat we can find the top differentailly expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
 
-To start with we can find all the markers in cluster 7. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
+To start with we can find all the markers in cluster 8. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
 
 ```{r, echo=TRUE, results='hide'}
 
@@ -56,15 +56,29 @@ To start with we can find all the markers in cluster 7. The min.pct argument req
 DefaultAssay(seurat) <- "RNA"
 
 
-cluster5.markers <- FindMarkers(seurat, ident.1 = 5, min.pct  = 0.25)
-cluster5.markers %>% head
+cluster8.markers <- FindMarkers(seurat, ident.1 = 8, min.pct  = 0.25)
+cluster8.markers %>% head
 ```
+
 
 A little  bit of table manipulation makes the markers easier to view...
 
 ```{r, results='hide'}
-cluster5.markers  %>% select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
+cluster8.markers  %>% select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
 ```
+To check our DE findings we can visualise expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows expression of a gene (or genes) of interest across all clusters.
+
+```{r}
+VlnPlot(seurat, features = "IL32")
+```
+We can also check whcih cells express out gene of interest on the UMAP image
+
+```{r}
+FeaturePlot(seurat, features = "IL32")
+
+```
+
+
 Perhaps we are most interested in the differentially expressed genes between clusters 1 and 3
 
 ```{r, results='hide'}
@@ -105,24 +119,44 @@ head(conserved6_markers)
 
 ```
 
-
-
-```{r, results='hide'}
-markers.to.plot <- c()
-for(i in 0:11){
- markers.to.plot<-  FindConservedMarkers(seurat, ident.1 = i, grouping.var = "Disease") %>% rownames_to_column("gene") %>% top_n(n = 2) %>% select(gene) %>% bind_rows(markers.to.plot)
-}
-
-markers.to.plot <- distinct(markers.to.plot)
-markers.to.plot
-DotPlot(seurat, features = markers.to.plot$gene, cols = c("blue", "red"), dot.scale = 8, split.by = "Disease") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+```{r}
+VlnPlot(seurat, features = "JUN", split.by = "Disease")
 ```
 
-And of course, we now what to find the opposite case - which genes are differentially expressed within a cluster but across conditions.
 
-# Find differential expressed genes across conditions
+```{r}
+seurat$cluster_state <- paste(seurat$seurat_clusters, seurat$Disease, sep = "_")
+seurat$cluster_state %>% head()
+Idents(seurat) <- "cluster_state"
+
+unique(seurat$Disease)
+seurat@meta.data
+
+cluster5.response <- FindMarkers(seurat, ident.1 = "5_Disease", ident.2 = "5_Healthy", verbose = FALSE)
+head(cluster5.response, n = 15)
+
+```
+
+```{r, fig.height=8}
+FeaturePlot(seurat, features = c("LYZ", "S100A8", "IL32"), split.by = "Disease", max.cutoff = 3,
+    cols = c("grey", "red"))
+```
+
 
 ```{r}
 
+dbs <- c("GO_Molecular_Function_2015", "GO_Cellular_Component_2015", "GO_Biological_Process_2015")
+DEenrichRPlot(
+  seurat,
+  ident.1 = "5_Disease",
+  ident.2 = "5_Healthy",
+  max.genes = 50,
+  enrich.database = "GO_Biological_Process_2021"
+
+)
 ```
+
+
+
+
 
