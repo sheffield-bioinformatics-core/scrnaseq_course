@@ -10,3 +10,5 @@ COPY *.Rmd /home/participant
 WORKDIR /home/participant
 RUN R -f 'download_GSE132509.R'
 COPY regev_lab_cell_cycle_genes.txt /home/participant
+RUN mkdir /home/participant/Robjects
+COPY Robjects/* /home/participant/Robjects

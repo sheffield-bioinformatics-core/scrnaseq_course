@@ -37,9 +37,16 @@ library(Seurat)
 library(tidyverse)
 ```
 
+You will need to install these on your own computer after the course
+
+```{r eval=FALSE}
+install.packages("tidyverse")
+install.packages("Seurat")
+```
+
 # Data Import
 
-We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). The sampleSheet data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
+We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). You do not have to re-run this script. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
@@ -48,16 +55,19 @@ sampleSheet
 
 ## Code to import a single biological sample
 
-The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in adirectory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
+We are going to import the data for the first disease sample - `GSM3872434` The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in the `GSM3872434` directory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
 
 ```{r}
+## check to see that the expected files are present
 list.files("GSE132509/GSM3872434/")
 ```
 
 It is then a two-step process to create a object that `Seurat` can use for analysis.
 
 ```{r}
+## Read all the files into a 'sparse matrix'
 seurat_data <- Read10X(data.dir = "GSE132509/GSM3872434")
+## convert into Seurat object type for further analysis
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
                                  min.features = 100, 
                                  project = "ETV6-RUNX1_1")
@@ -73,7 +83,7 @@ Note that we tend to look at summaries or plots of the data rather than the raw 
 GetAssayData(seurat_obj, "counts")[1:10,1:2]
 ```
 
-The "meta-data" in the object is used to record any QA data that we generate or other grouping information related to the samples (cells). We will see how to add to this data frame later. For now it contains the number of UMI (`nCount_RNA`) and genes (`nFeature_RNA`) detected in each cell.
+The "meta-data" in the object is used to record any QA data that we generate or other grouping information related to the samples (cells). We will see how to add to this data frame later. For now it contains the number of UMI (`nCount_RNA`) and genes (`nFeature_RNA`) detected in each cell. The `orig.ident` is used to identify which biological sample each cell originates from. It will be possible to store multiple samples in this object, as we will see in the following exercise.
 
 ```{r}
 seurat_obj@meta.data %>% head
@@ -92,16 +102,11 @@ seurat_obj@meta.data %>% head
 </div>
 
 ```{r}
-seurat_data <- Read10X(data.dir = "GSE132509/GSM3872442")
-seurat_obj2 <- CreateSeuratObject(counts = seurat_data, 
-                                 min.features = 100, 
-                                 project = "PBMMC_1")
-seurat_obj2
 
 
 ```
 
-We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means creating a single counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can 
+We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means creating a single counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can start from the merged data at a later point.
 
 ```{r eval=FALSE}
 merged_data <- merge(seurat_obj,seurat_obj2)
@@ -110,7 +115,9 @@ dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
 ```
 
-```{r eval=FALSE}
+If you didn't manage to complete this exercise, the output is available in the course folder.
+
+```{r }
 merged_data <- readRDS("Robjects/merged_data.RDS")
 ```
 
@@ -121,7 +128,9 @@ If you have more than two samples in your dataset, you might want to take a more
 
 ### Quality control
 
-As with other high-throughput dataset, **QC is an important part of the workflow and should not be overlooked**. Whilst it is difficult to give hard cut-offs that will work for all experiments, the `ggplot2` and `dplyr` packages provide convenient infrastructure for generating QC summaries and plots. You can re-use the code presented here on your own data, but you will have to interpret the results and use your judgement. Furthermore, the QC process is a delicate balance between retaining as many high quality cells as possible and removing as many true poor quality cells as possible. 
+As with other high-throughput datasets, **QC is an important part of the workflow and should not be overlooked**. Whilst it is difficult to give hard cut-offs that will work for all experiments, the `ggplot2` and `dplyr` packages provide convenient infrastructure for generating QC summaries and plots. You can re-use the code presented here on your own data, but you will have to interpret the results and use your judgement. 
+
+Furthermore, the QC process is a delicate balance between retaining as many high quality cells as possible and removing as many truly poor quality cells as possible. Ultimately we want the clusters in our dataset to reflect biological variability and not technical or uninteresting variation. If we are not careful we could mistake poor quality cells for cells that have low complexity but are still biologically-meaningful.
 
 In order to remove or reduce the impact of poor-quality data on our downstream analysis we will attempt to filter using some QC metrics. The three principle means of doing this are to apply thresholds for inclusion on three characteristics:
 
@@ -129,7 +138,7 @@ In order to remove or reduce the impact of poor-quality data on our downstream a
 - The number of expressed genes in each cell defined as the number of genes with non-zero counts for that cell; any cell with very few expressed genes is likely to be of poor quality as the diverse transcript population has not been successfully `captured. 
 -  The proportion of UMIs mapped to genes in the mitochondrial genome; high proportions are indicative of poor-quality cells, possibly because of loss of cytoplasmic RNA from perforated cells (the reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane).
 
-Prior to performing QC, you should have a good idea what type of cells you expect to find. Do you expect low complexity cells or cells with high mitochondrial expression levels in your sample, for instance? We must then take this biology into account when assessing the quality of our data.
+Prior to performing QC, you should have a good idea what type of cells you expect to find; especially with regards to mitochondrial genes and complexity. We must then take this biology into account when assessing the quality of our data.
 
 The meta data stored in the merged data already contain some useful information about QC. We can add further to this by calculating the percentage of a particular set of genes that are expressed. A common use-case for this is Mitochondrial genes that can be indicative of cells under stress. The `PercentageFeatureSet` function can be used and makes use of a *regular expression* to identify the genes we are interested in. 
 
@@ -145,7 +154,7 @@ merged_data[["mito.ratio"]] <- PercentageFeatureSet(merged_data, pattern="^MT")/
 merged_data@meta.data
 ```
 
-The meta data can also include information about our sample grouping (which we already have in our `sampleSheet` object). The `left_join` function can be used to create a single data frame to hold all the information about our samples. At this point we also do some re-naming which will helping with data interpretation.
+The meta data can also include information about our sample grouping (which we already have in our `sampleSheet` object). The `left_join` function can be used to create a single data frame, compatible with `tidyverse`, to hold all the information about our samples. At this point we also do some re-naming which will helping with data interpretation.
 
 ```{r}
 qc_data <- merged_data@meta.data %>% 
@@ -163,7 +172,7 @@ View(qc_data)
 
 ### Number of cells per-sample
 
-The number of cells for each sample can be informative- especially if we have some idea about how many cells to expect as part of the experimental protocol. We can make a barplot using a `geom_bar`. Using the `SampleName` as our `x` aesthetic will automatically put the number of occurences of that name on the y aesthetic. Since the sample group information is contained in the `qc_data` data frame we can also colour by the `SampleGroup` to see if there is any underlying difference.
+The number of cells for each sample can be informative - especially if we have some idea about how many cells to expect as part of the experimental protocol. We can make a barplot using a `geom_bar`. Using the `SampleName` as our `x` aesthetic will automatically put the number of occurences of that name on the `y` aesthetic (hence we do not need to specify a `y` value inside `aes`. Since the sample group information is contained in the `qc_data` data frame we can also colour by the `SampleGroup` to see if there is any underlying difference.
 
 ```{r}
 qc_data %>% 
@@ -210,16 +219,25 @@ We can now look at the relationship between the number of UMI and number of gene
 ![](images/uMI_vs_gene.png)
 
 
-We would ideally like each cell to be measuring as many genes as possible. Cells that measure a few highly-expressed genes will not be very useful to us. We can define a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. Any cells that are candidates to be removed will be exhibiting a low novely score. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
+We would ideally like each cell to be measuring as many genes as possible. We can assess this by defining a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. If this score is low for a particular cell it means that there is not a wide variety of genes that have been sequenced in the cell. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
 
 ```{r}
 qc_data <- mutate(qc_data, Novelty = log10(nGene) / log10(nUMI))
+ggplot(qc_data, aes(x = Novelty, y = SampleName)) + geom_violin()
+
+```
+
+
+By colouring the plot of UMI vs nGene by this new score we seem to highlight any outlier points. However, exactly where to drawn the line and exclude cells is not completely clear. 
+
+
+```{r}
 
 ggplot(qc_data, aes(x = log10(nUMI), y= log10(nGene),col=Novelty)) + geom_point() + facet_wrap(~SampleName)
 
 ```
 
-By colouring the plot by this new score we seem to highlight any outlier points. However, exactly where to drawn the line and exclude cells is not completely clear. We still have another piece of information to consider, which is the number of mitochondrial genes. Recall that we want to remove any cells where this percentage is quite high. 
+We still have another piece of information to consider, which is the number of mitochondrial genes. Recall that we want to remove any cells where this percentage is quite high. 
 
 ## Mitochondrial counts
 
