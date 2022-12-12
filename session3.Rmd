@@ -38,6 +38,7 @@ Firstly, we will load up the two packages we have used previously.
 ```{r}
 library(Seurat, quietly = T)
 library(tidyverse, quietly = T)
+library(org.Hs.eg.db, quietly = T)
 ```
 
 And then we can load up the R objects we have used in the previous sessions.
@@ -131,7 +132,7 @@ seurat$cluster_state <- paste(seurat$seurat_clusters, seurat$Disease, sep = "_")
 Idents(seurat) <- "cluster_state"
 ```
 
-If we take alook at the meta data we can see our new cluster/condition column
+If we take a look at the meta data we can see our new cluster/condition column
 
 ```{r}
 seurat@meta.data %>% head()
@@ -149,6 +150,27 @@ Again, we can use a `VlnPlot` to visualise our findings. In this case we restict
 
 VlnPlot(seurat, features = "TRAC", split.by = "cluster_state" , idents = c("4_Disease", "4_Healthy"))
 ```
+# Annotating marker genes
+
+We can use gene databases within R to further anotate our marker genes of interest.
+
+```{r}
+#set the identitry back to the original clusters
+Idents(seurat) <- "seurat_clusters"
+
+columns(org.Hs.eg.db)
+anno <- select(org.Hs.eg.db,keys=rownames(seurat),columns=c("SYMBOL","GENENAME", "ENSEMBL"), keytype = "SYMBOL")
+head(anno)  
+
+anno_markers <- markers %>% 
+  dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
+  left_join(anno, by = c("gene" = "SYMBOL"))
+
+anno_markers
+
+```
+
+
 
 # Assigning cluster identity
 
@@ -214,7 +236,8 @@ healthy <- RunUMAP(healthy, dims = 1:20)
 p1 <- DimPlot(healthy)
 DotPlot(healthy, features = cell_markers) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
-```{r}
+
+
 ```{r}
 
 seurat2@meta.data
