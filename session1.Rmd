@@ -55,22 +55,22 @@ sampleSheet
 
 ## Code to import a single biological sample
 
-We are going to import the data for the first disease sample - `GSM3872434` The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in the `GSM3872434` directory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
+We are going to import the data for the first healthy sample - `GSM3872442` The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in the `GSM3872442` directory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
 
 ```{r}
 ## check to see that the expected files are present
-list.files("GSE132509/GSM3872434/")
+list.files("GSE132509/GSM3872442/")
 ```
 
 It is then a two-step process to create a object that `Seurat` can use for analysis.
 
 ```{r}
 ## Read all the files into a 'sparse matrix'
-seurat_data <- Read10X(data.dir = "GSE132509/GSM3872434")
+seurat_data <- Read10X(data.dir = "GSE132509/GSM3872442")
 ## convert into Seurat object type for further analysis
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
                                  min.features = 100, 
-                                 project = "ETV6-RUNX1_1")
+                                 project = "PBMMC_1")
 seurat_obj
 ```
 
@@ -97,11 +97,12 @@ seurat_obj@meta.data %>% head
 
 #### Exercise
 <div class="exercise">
-- Use to sampleSheet to determine the directory containing data from the first healthy individual (`PBMMC_1`).
+- Use to sampleSheet to determine the directory containing data from the second healthy individual (`PBMMC_2`).
 - Use the `Read10X` and `CreateSeuratObject` functions to import the data from this sample, and save as a new variable (`seurat_obj2` for example)
 </div>
 
 ```{r}
+
 
 
 ```
@@ -160,8 +161,8 @@ The meta data can also include information about our sample grouping (which we a
 qc_data <- merged_data@meta.data %>% 
   data.frame %>% 
   left_join(sampleSheet, by = c("orig.ident"="SampleName")) %>% 
-  rename(SampleName = orig.ident) %>% 
-  rename(nUMI = nCount_RNA, nGene=nFeature_RNA)
+  dplyr::rename(SampleName = orig.ident) %>% 
+  dplyr::rename(nUMI = nCount_RNA, nGene=nFeature_RNA)
 ```
 
 
