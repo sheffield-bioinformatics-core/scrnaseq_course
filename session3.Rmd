@@ -84,7 +84,7 @@ cluster8.markers %>% head
 A little  bit of table manipulation makes the markers easier to view...
 
 ```{r, results='hide'}
-cluster8.markers  %>% select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
+cluster8.markers  %>% dplyr::select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
 ```
 To check our DE findings we can visualise expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows expression of a gene (or genes) of interest across all clusters.
 
@@ -117,7 +117,7 @@ Usually, we are wanting to find the most differentially expressed genes in each 
 markers <- FindAllMarkers(seurat, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = F)
 
 markers %>%
-  select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
+  dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
     group_by(cluster) %>%
     slice_max(n = 5, order_by = avg_log2FC)
 ```
@@ -159,7 +159,7 @@ We can use gene databases within R to further anotate our marker genes of intere
 Idents(seurat) <- "seurat_clusters"
 
 columns(org.Hs.eg.db)
-anno <- select(org.Hs.eg.db,keys=rownames(seurat),columns=c("SYMBOL","GENENAME", "ENSEMBL"), keytype = "SYMBOL")
+anno <- AnnotationDbi::select(org.Hs.eg.db,keys=rownames(seurat),columns=c("SYMBOL","GENENAME", "ENSEMBL"), keytype = "SYMBOL")
 head(anno)  
 
 anno_markers <- markers %>% 
