@@ -15,15 +15,23 @@ output:
 
 # Introduction
 
-## Recap 
+In session 1, we read in our data and created a seurat object. We then performed some quality control, and subset the data according to the QC plots we generated. In this session, we are going to normalise the data, select the most variable features and scale,regressing out unwanted sources of variation. 
 
-In session 1, we ...
+## Learning Objectives
+
+* Build code to normalise data 
+
+* Identify unwanted sources of variation in the data & find variable genes
+
+* Execute SCTransform to transform data and regress out unwanted variation
+
+* Build code to integrate data & form clusters
 
 # Normalisation 
 
 Now that we have our high quality cells, there are still a few steps left before we can cluster cells. 
 
-First we normalise the expression values. Then we identify highly variable genes. Next, data is scaled and unwanted effects regressed out. We integrate samples together, Finally, we do dimension reduction.
+Firstly, we normalise the expression values. Then we identify highly variable genes. Next, data is scaled and unwanted effects regressed out. Then we integrate samples together, and finally, we do dimension reduction.
 
 
 ```{r}
@@ -156,9 +164,9 @@ There are 4 steps for integration:
 
 2. Prepare the SCTransform object for integration
 
-3. Identify 'anchors' between cells. These are mutual nearest neighbours across the data. For each cell, the closest neighbour is identified based on gene expression. If the neigbour's closest neighbour is the original cell, these will be marked as 'anchors' for the data.
+3. Identify 'anchors' between cells. These are mutual nearest neighbours across the data. For each cell, the closest neighbour is identified based on gene expression. If the neighbour's closest neighbour is the original cell, these will be marked as 'anchors' for the data.
 
-4. Integrate the conditions / samples by using the anchors along with thier corresponding scores to transform cell expression values. 
+4. Integrate the conditions / samples by using the anchors along with their corresponding scores to transform cell expression values. 
 
 ```{r}
 # Select variable features for integration
@@ -200,7 +208,7 @@ DimPlot(seurat_integrated, reduction = "pca", group.by= "Phase")
 DimPlot(seurat_integrated, reduction = "umap", group.by= "Phase")
 ```
 
-We  might want to check the numbers as well. We expect the majority of cell type clusters to be present in both samples, however depending on the experiment we might expect condition specific cell types instead.
+We might want to check the numbers as well. We expect the majority of cell type clusters to be present in both samples, however depending on the experiment we might expect condition specific cell types instead.
 
 ```{r}
 # Extract identity and sample information from seurat object to determine the number of cells per cluster per sample
