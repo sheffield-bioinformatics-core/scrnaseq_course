@@ -24,19 +24,19 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. 
+To re-cap - we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. 
 
 In the next part of the course we are going to explore differentially expressed genes between clusters and assigning cluster identity. 
 
 ## Learning Objectives
 * Find differentially expressed genes using `FindMarkers()` and `FindAllMarkers()`.
-* Use the biocondictor human annotation package `org.Hs.eg.db` to add some more futher annotation to our marker genes.
+* Use the bioconductor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
 * Assign cluster identity using canonical marker genes
 * Carry out a simple pathway analysis
 
 ![](images/flowchart2.png)
 
-Firstly, we will load up the packages we will needfor this part of the course.
+Firstly, we will load up the packages we will need for this part of the course.
 
 ```{r}
 library(Seurat, quietly = T)
@@ -66,7 +66,7 @@ DimPlot(seurat)
 # Find differentially expressed genes
 Our next objective is to start assigning some **biological meaning** to our data. We have some nice clusters but no clue yet what cell groups out clusters contain.
 
-In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
+In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parametric Wilcoxon rank sum test but other methods are available within the function. 
 
 To start with we can find all the differentially expressed genes in cluster 8 compared to every other cluster. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
 
@@ -137,7 +137,7 @@ markers %>%
 
 # Annotating marker genes
 
-We can use gene databases within R to further annotate our marker genes of interest. The `org.Hs.eg.db` database is a genome wide annotationpackage for human that has many different gene mappings based on Entrez Gene identifiers.
+We can use gene databases within R to further annotate our marker genes of interest. The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers.
 
 In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and ensembl ID from the database.
 
