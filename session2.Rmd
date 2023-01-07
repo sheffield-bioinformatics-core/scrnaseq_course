@@ -65,7 +65,7 @@ We can use the `NormalizeData` function to use log normalisation to take the seq
 filtered_data <- NormalizeData(filtered_data)
 ```
 
-We determine which phase of the cell cycle a cell is in, based on it's expression of phase markers. We've included the list we need here as a txt, but some other organisms can be found (here)[https://github.com/hbc/tinyatlas/tree/master/cell_cycle], as well as a resource (here)[https://hbctraining.github.io/scRNA-seq_online/lessons/cell_cycle_scoring.html] for finding cell markers for other organisms.
+We determine which phase of the cell cycle a cell is in, based on it's expression of phase markers. We've included the list we need here as a txt, but some other organisms can be found [here](https://github.com/hbc/tinyatlas/tree/master/cell_cycle), as well as a resource [here](https://hbctraining.github.io/scRNA-seq_online/lessons/cell_cycle_scoring.html) for finding cell markers for other organisms.
 
 ```{r}
 cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
