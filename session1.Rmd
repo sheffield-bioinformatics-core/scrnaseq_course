@@ -19,12 +19,12 @@ In this workshop we will be using the dataset:-
 
 The materials are based on materials kindly-shared by Harvard Bioinformatics Core and Cancer Research Uk Cambridge Institute
 
-- [Harvard Bioinformatics Core](https://hbctraining.github.io/scRNA-seq_online/)
+- [Harvard Bioinformatics Core](https://hbctraining.github.io/scRNA-seq_online/schedule/links-to-lessons.html)
 - [Cancer Research Uk](https://bioinformatics-core-shared-training.github.io/Bitesize_SingleCell/)
 
-The *processed* single-cell data for this study have been made available on Gene Expression Omnibus (GEO), and we have downloaded them for you and re-organised the data into folders. For more information, the GEO entry is [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132509) and the code to download is given in the R script [download_GSE132509.R](download_GSE132509.R).
+The *processed* single-cell data for this study have been made available on Gene Expression Omnibus (GEO), and we have downloaded them for you and re-organised the data into folders. For more information, the GEO entry is [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132509) and the code to download is given in the R script [download_GSE132509.R](download_GSE132509.R). **This code is for your information only, and you do not need to re-run**.
 
-*We will only analyse a subset of the dataset during the practical*.
+*We will only analyse a subset of the dataset during the practical*. However, the other samples are provided if you want extra practice in your own time.
 
 <div class="information">
 Much of the code and information presented in this workshop is *exploratory* rather than describing a strict workflow that must always be followed. In particular, the some of the cut-offs and parameters used **may not be appropriate for your own dataset**. 
@@ -46,7 +46,7 @@ install.packages("Seurat")
 
 # Data Import
 
-We start by importing the sample information for the dataset. If you are interested, the creation of this file is shown in [download_GSE132509.R](download_GSE132509.R). You do not have to re-run this script. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
+We start by importing the sample information for the dataset. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
@@ -55,7 +55,7 @@ sampleSheet
 
 ## Code to import a single biological sample
 
-We are going to import the data for the first healthy sample - `GSM3872442` The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in the `GSM3872442` directory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. 
+We are going to import the data for the first healthy sample - `GSM3872442` The code to read a single sample is given below. This assumes that the output from the *cellranger* tool can be found in the `GSM3872442` directory. This output consists of the files `barcodes.tsv.gz`, `features.tsv.gz` and `matrix.mtx.gz`. As part of the course setup ([`download_GSE132509.R`]("download_GSE132509.R")) we have already renamed the outputs to the convention that `Seurat` is expecting. If your data have been processed using `cellranger` they should already be in the correct location and format (presumably the files for this dataset had to be re-organised as part of the upload to GEO?).
 
 ```{r}
 ## check to see that the expected files are present
@@ -104,10 +104,9 @@ seurat_obj@meta.data %>% head
 ```{r}
 
 
-
 ```
 
-We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means creating a single counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can start from the merged data at a later point.
+We have now loaded the data from two separate samples into RStudio. For QC purposes it will be convenient to *merge* the two samples into one object. In practice, this means combining the counts matrix and meta information for both samples. If you have created the `seurat_obj2` from the exercise we can use the `merge` function to create a single object. At this point, it will also be useful to save the merged object to disk so we can start from the merged data at a later point.
 
 ```{r eval=FALSE}
 merged_data <- merge(seurat_obj,seurat_obj2)
@@ -119,7 +118,7 @@ saveRDS(merged_data, file = "Robjects/merged_data.RDS")
 If you didn't manage to complete this exercise, the output is available in the course folder.
 
 ```{r }
-merged_data <- readRDS("Robjects/merged_data.RDS")
+merged_data <- readRDS("Robjects/merged_data_BACKUP.RDS")
 ```
 
 
@@ -136,7 +135,7 @@ Furthermore, the QC process is a delicate balance between retaining as many high
 In order to remove or reduce the impact of poor-quality data on our downstream analysis we will attempt to filter using some QC metrics. The three principle means of doing this are to apply thresholds for inclusion on three characteristics:
 
 - Cells with small library sizes are considered to be of low quality as the RNA has not been efficiently captured
-- The number of expressed genes in each cell defined as the number of genes with non-zero counts for that cell; any cell with very few expressed genes is likely to be of poor quality as the diverse transcript population has not been successfully `captured. 
+- The number of expressed genes in each cell defined as the number of genes with non-zero counts for that cell; any cell with very few expressed genes is likely to be of poor quality as the diverse transcript population has not been successfully captured. 
 -  The proportion of UMIs mapped to genes in the mitochondrial genome; high proportions are indicative of poor-quality cells, possibly because of loss of cytoplasmic RNA from perforated cells (the reasoning is that mitochondria are larger than individual transcript molecules and less likely to escape through tears in the cell membrane).
 
 Prior to performing QC, you should have a good idea what type of cells you expect to find; especially with regards to mitochondrial genes and complexity. We must then take this biology into account when assessing the quality of our data.
@@ -177,10 +176,10 @@ The number of cells for each sample can be informative - especially if we have s
 
 ```{r}
 qc_data %>% 
-  ggplot(aes(x = SampleName, fill=SampleGroup)) + geom_bar() + theme(axis.text.x = element_text(angle=45,vjust=1,hjust=1))
+  ggplot(aes(x = SampleName, fill=SampleName)) + geom_bar() + theme(axis.text.x = element_text(angle=45,vjust=1,hjust=1))
 ```
 
-There is clearly some variation between samples, and possibly the number of cells in *PBMMC* samples is a bit lower. The number of cells does not tell the whole story, as we would rather not exclude all the data for a particular sample. Instead we would rather identify which cells from this sample are usuable for analysis. For this we can look at the number of UMI and genes (and the relationship between these).
+There is clearly some variation between samples, and  the number of cells in *PBMMC_1* sample is a bit lower. The number of cells does not tell the whole story. Even though *PBMMC_2* has more cells they might not all be usable. To explore this further we can look at the number of UMI and genes (and the relationship between these).
 
 ### UMI and gene counts per cell
 
@@ -190,14 +189,14 @@ A typical way to representing distributions is using a violin plot. We can choos
 
 ```{r}
 qc_data %>% 
-  ggplot(aes(x = nUMI,y = SampleName,fill = SampleGroup)) + geom_violin() + scale_x_log10() 
+  ggplot(aes(x = nUMI,y = SampleName,fill = SampleName)) + geom_violin() + scale_x_log10() 
 ```
 
 An equivalent plot for `nGene` can be produced by changing the `x` aesthetic.
 
 ```{r}
 qc_data %>% 
-  ggplot(aes(x = nGene,y = SampleName,fill = SampleGroup)) + geom_violin() + scale_x_log10() 
+  ggplot(aes(x = nGene,y = SampleName,fill = SampleName)) + geom_violin() + scale_x_log10() 
 ```
 
 Along with these graphical representations we can also produce numeric summaries:-
@@ -217,10 +216,15 @@ We can now look at the relationship between the number of UMI and number of gene
 **Exercise:** Make a plot to compare the `nUMI` and `nGene` values for each sample. See below for an example
 </div>
 
+
+```{r}
+
+```
+
 ![](images/uMI_vs_gene.png)
 
 
-We would ideally like each cell to be measuring as many genes as possible. We can assess this by defining a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. If this score is low for a particular cell it means that there is not a wide variety of genes that have been sequenced in the cell. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution.
+We would ideally like each cell to be measuring as many genes as possible. We can assess this by defining a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. If this score is low for a particular cell it means that there is not a wide variety of genes that have been sequenced in the cell. Even though the `nUMI` might be high for such cells, the same genes have been sequenced repeatedly. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution. **The score is expected to be around 0.8 for good quality cells**
 
 ```{r}
 qc_data <- mutate(qc_data, Novelty = log10(nGene) / log10(nUMI))
@@ -274,6 +278,13 @@ qc_data %>%
   mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
   ggplot(aes(x = log10(nUMI), y = log10(nGene), col=kept_in_analysis)) + geom_point() + facet_wrap(~SampleName)
 ```
+As we would expect, most of the removed cells are from *PBMMC_2*. Exactly how many are removed can be calculated as follows:-
+
+```{r}
+qc_data %>% 
+  mutate(kept_in_analysis = nUMI >= 500 & nGene >=250 & Novelty > 0.8 & mito.ratio < 0.2) %>%
+  count(kept_in_analysis,SampleName)
+```
 
 The plot and table above we useful for visualisation purposes, and once we are happy we can proceed to filter our cells. This requires us to modify the data stored in the Seurat object and then use the `subset` function.
 
@@ -290,39 +301,65 @@ filtered_data <- subset(x = merged_data,
                            (nGene >= 250) & 
                            (Novelty > 0.80) & 
                            (mito.ratio < 0.20))
-dim(filtered_data)
-rm(merged_data)
+
 ```
 
-Save the Seurat data as an R object again
+We can now save the Seurat data as an R object again and remove the merged data as we no longer need it
 
 ```{r}
 saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
+rm(merged_data)
 ```
 
 
 ## Gene filtering
 
-- Single-cell data is *sparse*
-- We want to remove genes with lots of 0 values
-- Will impact normalisation
+By this stage we have identified, and removed, any potentially unreliable *cells* from our dataset. We still have the issue of many zero counts in the data. In technical terms we say that the data are *sparse*. In presence of these zero values will affect the average expression for a given cell (which is used for normalisation). Genes with too many zero entries are going to add to the noise in our dataset and not be informative. 
+
 
 ```{r}
-# Extract counts
+# Extract the counts from our filtered object
 counts <- GetAssayData(object = filtered_data, slot = "counts")
 
-# Output a logical matrix specifying for each gene on whether or not there are more than zero counts per cell
+# create a matrix of TRUE/FALSE to indicate whether particular gene is non-zero in a given sample
 nonzero <- counts > 0
 
 ```
+Each row of the `nonzero` contains a series of 0 of 1 depending on whether that gene is non-zero in that sample. Since logical (`TRUE`/`FALSE`) values can also be treated as 0 or 1, the sum of a given row will be how many samples that gene is non-zero in
 
 ```{r}
-# Sums all TRUE values and returns TRUE if more than 10 TRUE values per gene
-keep_genes <- Matrix::rowSums(nonzero) >= 10
+## this gene is zero in all samples
+table(nonzero[1,])
+sum(nonzero[1,])
 
-# Only keeping those genes expressed in more than 10 cells
+## this gene (picked arbitarily) is nonzero in 43 samples
+table(nonzero[21,])
+sum(nonzero[21,])
+```
+
+```{r}
+rs <- rowSums(nonzero)
+rs[1]
+rs[21]
+```
+We can tabulate the row sums to get an idea of the distribution. From this we can see that a large number of genes are zero in all cells. These clearly correspond to some of the genes that we want to remove.
+
+```{r}
+data.frame(RowSum = rs) %>% 
+  count(RowSum)
+```
+
+
+We choose to pick genes that are **nonzero in 10 or more cells** and create a new count matrix. However, since `Seurat` requires more complex data than just a counts matrix we have to create a seurat object as before. The meta data for this new object can be the same as our filtered object (since we have just removed *genes* from the dataset and not *cells*).
+
+```{r}
+## keep_genes will be TRUE or FALSE depending on if a gene is nonzero in at least 10 samples
+keep_genes <-rowSums(nonzero) >= 10
+
+## make new count matrix by selecting only rows where keep_genes is TRUE
 filtered_counts <- counts[keep_genes, ]
 
+## make a new Seurat object
 filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
 ```
 
@@ -336,6 +373,11 @@ saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
 
 
 # Appendix 
+
+<div class="information">
+The following section will be useful if you are required to import a dataset with many samples.
+
+</div>
 
 ## Importing many samples using a `for` loop
 
