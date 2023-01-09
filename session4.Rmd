@@ -1,5 +1,5 @@
 ---
-title: "Analysis of Single-Cell RNA-seq - Session 3"
+title: "Analysis of Single-Cell RNA-seq - Session 4"
 author: "Emily V Chambers"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output: 
@@ -24,19 +24,19 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap - we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. 
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. 
 
 In the next part of the course we are going to explore differentially expressed genes between clusters and assigning cluster identity. 
 
 ## Learning Objectives
 * Find differentially expressed genes using `FindMarkers()` and `FindAllMarkers()`.
-* Use the bioconductor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
+* Use the biocondictor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
 * Assign cluster identity using canonical marker genes
 * Carry out a simple pathway analysis
 
 ![](images/flowchart2.png)
 
-Firstly, we will load up the packages we will need for this part of the course.
+Firstly, we will load up the packages we will needfor this part of the course.
 
 ```{r}
 library(Seurat, quietly = T)
@@ -47,26 +47,22 @@ And then we can load up the R objects we have used in the previous sessions.
 ```{r}
 seurat <- readRDS("Robjects/seurat_integrated.RDS")
 ```
-```{r, eval=FALSE, echo=F}
-seurat <- RunPCA(object = seurat)
-ElbowPlot(seurat)
 
-seurat <- RunTSNE(object = seurat)
-seurat <- RunUMAP(object = seurat, dims = 1:20)
-seurat <- FindNeighbors(object = seurat, dims = 1:20)
-seurat <- FindClusters(object = seurat, dims=1:20, resolution = 0.5)
-DimPlot(seurat, split.by = "Disease")
+We can simple run the name of the Seurat object (in our case 'seurat') to give us a summary of what the object contains and what calculations have been performed on it.
+```{r, eval=FALSE, echo=F}
+seurat
 ```
+
 We can recap our clustering by taking a look at the `DimPLot`
 ```{r}
-DimPlot(seurat)
+DimPlot(seurat, reduction = "umap")
 ```
 
 
 # Find differentially expressed genes
 Our next objective is to start assigning some **biological meaning** to our data. We have some nice clusters but no clue yet what cell groups out clusters contain.
 
-In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parametric Wilcoxon rank sum test but other methods are available within the function. 
+In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
 
 To start with we can find all the differentially expressed genes in cluster 8 compared to every other cluster. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
 
@@ -77,24 +73,24 @@ DefaultAssay(seurat) <- "RNA"
 
 
 ```{r}
-cluster8.markers <- FindMarkers(seurat, ident.1 = 8, min.pct  = 0.25, verbose = F)
-cluster8.markers %>% head
+cluster3.markers <- FindMarkers(seurat, ident.1 = 3, min.pct  = 0.25, verbose = F)
+cluster3.markers %>% head
 ```
 A quick look at the top 6 lines in our differentially expressed marker gene table shows us the format of the data. We have the results of the Wilcoxon rank sum test as a p value and adjusted p value for multiple testing. We also have our average log2 fold change in expression between our clusters. The pct.1 and pct.2 columns show us the percentage of cells within the cluster the gene is expressed in (we set a minimum threshold of 20% in the function). As default, the output table is sorted by adjusted p value.
 
 A little  bit of table manipulation in `dplyr` makes the markers easier to view...
 ```{r}
-cluster8.markers  %>% dplyr::select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
+cluster3.markers  %>% dplyr::select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
 ```
 To check our DE findings, we can visualize expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows expression of a gene (or genes) of interest across all clusters.
 
 ```{r}
-VlnPlot(seurat, features = "IL32")
+VlnPlot(seurat, features = "LYZ")
 ```
 We can also check which cells express out gene of interest on the UMAP image using `FeaturePlot`
 
 ```{r}
-FeaturePlot(seurat, features = "IL32")
+FeaturePlot(seurat, features = "LYZ")
 
 ```
 Perhaps we are most interested in the differentially expressed genes between clusters 1 and 3
@@ -103,7 +99,7 @@ Perhaps we are most interested in the differentially expressed genes between clu
 cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = 3, min.pct = 0.25, verbose = F)
 cluster1.markers %>% head()
 ```
-... or the DE genes between clusters 1 and 3 and 4?
+... or the DE genes between clusters 1 in comparison to 3 and 4?
 ```{r}
 cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = c(3,4), min.pct = 0.25, verbose = F)
 cluster1.markers %>% head()
@@ -137,7 +133,7 @@ markers %>%
 
 # Annotating marker genes
 
-We can use gene databases within R to further annotate our marker genes of interest. The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers.
+We can use gene databases within R to further annotate our marker genes of interest. The `org.Hs.eg.db` database is a genome wide annotationpackage for human that has many different gene mappings based on Entrez Gene identifiers.
 
 In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and ensembl ID from the database.
 
@@ -175,7 +171,7 @@ MZB1    BCMA
 
 We can assign these marker genes as a variable
 ```{r}
-cell_markers <- c("CD34", "MS4A1", "CST3" ,"SPN", "HBA1", "CD3D", "NKG7", "GNLY",  "MZB1")
+cell_markers <- c("CD34", "MS4A1", "CST3" ,"SPN", "HBA1", "CD3D", "NKG7",  "MZB1")
 ```
 
 Dot plots allow us to examine particular features or genes of interest across all clusters. Creating a dotplot of the cell type markers lets us assign identity based on their expression.
@@ -185,14 +181,14 @@ DotPlot(seurat, features = cell_markers) + theme(axis.text.x = element_text(angl
 We can then manually create new identities for each cluster as follows.
 
 ```{r}
-new.cluster.ids <- c("Variable", "Immature HPC", "B Cells + Erythrocytes", "BMCA", "Monocytes", "Cancer cells", "HPC", "T Cells + NK Cells", "B cells", "CD20+ B Cells")
+new.cluster.ids <- c("T Cells", "T Cells", "Erythrocytes",  "Monocytes", "x", "CD79A B cells", "BCMA1", "NK Cells", "x2", "BCMA", "Monocytes", "CD20+ B cells", "BCMA", "Erythrocytes", "BCMA")
 names(new.cluster.ids) <- levels(seurat)
 new.cluster.ids
-seurat <- RenameIdents(seurat, new.cluster.ids)
+seurat_named <- RenameIdents(seurat, new.cluster.ids)
 ```
 
 ```{r}
-DimPlot(seurat, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+DimPlot(seurat_named, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 ```
 
 # GO term and pathway enrichment
@@ -217,11 +213,12 @@ go_markers <- anno_markers %>% filter(cluster ==1) %>% pull(ENTREZID)
   eGO[]
 
 eGO[] %>%
-  slice_max(n = 10, order_by = -p.adjust) %>% 
+  slice_max(n = 10, order_by = -log10(p.adjust)) %>% 
   ggplot(aes(x = -log10(p.adjust), y = Description)) +
   geom_col(fill="blue") + 
   xlab('-log10 FDR') + 
   ylab(NULL)
+
 
 
 ```
