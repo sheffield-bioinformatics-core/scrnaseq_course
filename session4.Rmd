@@ -133,13 +133,35 @@ markers %>%
 
 # Annotating marker genes
 
-We can use gene databases within R to further annotate our marker genes of interest. The `org.Hs.eg.db` database is a genome wide annotationpackage for human that has many different gene mappings based on Entrez Gene identifiers.
+We may want to share our findings with collaborators or perform further bioinformatic analysis on our DE genes in clusters of interest. In this dataset, the gene level information is given as a gene name. Whilst this is useful we may want to embellish these results with some gene description information or some other gene IDs (eg Ensembl, Entrez).
 
-In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and ensembl ID from the database.
+The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers. These are up to data databases of gene anotation that can be installed like any other biocunductor package
+
+```{r}
+install.packages("BiocManager")
+BiocManager::install("org.Hs.eg.db")
+```
+
+
+In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database. In order to see what we can extract we can run the `columns` function on the annotation database.
 
 ```{r}
 columns(org.Hs.eg.db) # We can use this command to see which data can be pulled from the database
+```
 
+
+
+We are going to filter the database by a key or set of keys in order to extract the information we want. Valid names for the key can be retrieved with the `keytypes` function.
+
+```{r}
+keytypes(org.Hs.eg.db)
+```
+We are going to use the keytype 'SYMBOL' which designates the gene names that we have in our rownames of the seurat object.
+
+Unfortunately, the authors of `dplyr` and `AnnotationDbi` have both decided to use the name `select` in their packages. To avoid confusion and problems from packages attempting to use the wrong tool, the following code is sometimes used:-
+
+AnnotationDbi::select which tells us to use the 'select' function from the AnnotationDBI package.
+```{r}
 anno <- AnnotationDbi::select(org.Hs.eg.db,keys=rownames(seurat),columns=c("SYMBOL","GENENAME", "ENTREZID"), keytype = "SYMBOL")
 
 # Check it worked!
@@ -154,6 +176,13 @@ anno_markers <- markers %>%
 anno_markers %>% head()
 
 ```
+
+At this point we might want to save our result into a nicely formatted file where we can look up our clusters, top DE genes and their gene descriptions.
+
+```{r}
+anno_markers %>% write_csv("Annotated.results.csv")
+```
+
 # Assigning cluster identity
 
 To assign biological meaning to our clusters, we are going to use canonical cell type markers from the paper. These genes are known to be expressed in a particular cell type.
