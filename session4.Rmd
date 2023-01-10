@@ -257,26 +257,26 @@ DimPlot(seurat_named, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegen
 We can check our result to the UMAP plot produced from the full dataset within the paper - not too bad! Considering we have used a subset and not followed their exact method.
 ![](images/umaps.png)
 
-```{r}
-# load gene set preparation function
-source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/gene_sets_prepare.R")
-# load cell type annotation function
-source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_score_.R")
-```
 
 
 # GO term and pathway enrichment
+Sometimes we want to carry out a *Gene Enrichment Analysis* on a list of genes of interest. This enables us to find *functional terms* that are statistically over represented within a group of genes compared to a background list. `clusterProfiler` is an R package that provides statistical tests for expression analysis of terms such as GO (Gene Ontology), within gene lists that have shown statistically significant differences. 
 
-Explanatory text
+When using this tool we need to have two inputs: a list of genes that show significant differentiation in expression and a list of background genes. Hypergeometric tests are used for statistical enrichment analysis test. 
+
+We can check for GO terms measuring BP (biological process), CC (cell component) and MF (molecular function).
+
+First of all we need to create our test genes and background list
 
 ```{r}
 library(clusterProfiler)
 background <- anno %>% pull("ENTREZID")
 
-go_markers <- anno_markers %>% filter(cluster ==1) %>% pull(ENTREZID)
+go_markers <- anno_markers %>% filter(cluster ==c(0,1)) %>% pull(ENTREZID) # Lets look at clusters (1 + 2 -  T cells)
 
   eGO <- enrichGO(
     gene          = go_markers,
+    universe = background, 
     OrgDb         = org.Hs.eg.db,
     ont           = "BP",
     pAdjustMethod = "BH",
@@ -284,16 +284,12 @@ go_markers <- anno_markers %>% filter(cluster ==1) %>% pull(ENTREZID)
     readable      = TRUE
   )
   
-  eGO[]
+head(eGO)
+```
+`clusterProfiler` also has functionality to plot pathway diagrams for us.
 
-eGO[] %>%
-  slice_max(n = 10, order_by = -log10(p.adjust)) %>% 
-  ggplot(aes(x = -log10(p.adjust), y = Description)) +
-  geom_col(fill="blue") + 
-  xlab('-log10 FDR') + 
-  ylab(NULL)
-
-
+```{r}
+plotGOgraph(eGO)
 
 ```
 
