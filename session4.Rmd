@@ -24,48 +24,46 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled - regressing out unwanted sources of variation. 
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled the values - regressing out unwanted sources of variation. 
 
-In the next part of the course we are going to explore differentially expressed genes between clusters and assigning cluster identity. 
+In the next part of the course we are going to explore the genes that show the most differences in their expression between clusters. The top genes showing the biggest change in their expression comapred to the other clusters are often called *marker genes*. We can then use these marker genes to assign an *identity class* to our clusters of interest.
 
 ## Learning Objectives
 * Find differentially expressed genes using `FindMarkers()` and `FindAllMarkers()`.
-* Use the biocondictor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
+* Use the bioconductor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
 * Assign cluster identity using canonical marker genes
 * Carry out a simple pathway analysis
 
 ![](images/flowchart2.png)
 
-Firstly, we will load up the packages we will needfor this part of the course.
+Firstly, we will load up the packages we have been using so far for this part of the course.
 
 ```{r}
 library(Seurat, quietly = T)
 library(tidyverse, quietly = T)
-library(org.Hs.eg.db, quietly = T)
 ```
 And then we can load up the R objects we have used in the previous sessions.
 ```{r}
 seurat <- readRDS("Robjects/seurat_integrated.RDS")
 ```
-
-We can simple run the name of the Seurat object (in our case 'seurat') to give us a summary of what the object contains and what calculations have been performed on it.
-```{r, eval=FALSE, echo=F}
+We can simply run the name of the Seurat object (in our case `seurat`) to give us a summary of what the object contains and what calculations have been performed on it.
+```{r}
 seurat
 ```
-
-We can recap our clustering by taking a look at the `DimPLot`
+We can recap our clusters by taking a look at the `DimPlot`
 ```{r}
 DimPlot(seurat, reduction = "umap")
 ```
 
 
 # Find differentially expressed genes
-Our next objective is to start assigning some **biological meaning** to our data. We have some nice clusters but no clue yet what cell groups out clusters contain.
+Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters but no clue yet what cell groups out clusters contain.
 
 In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
 
-To start with we can find all the differentially expressed genes in cluster 8 compared to every other cluster. The min.pct argument requires a gene to be detected at a minimum percentage of cells.
+To start with we can find all the differentially expressed genes in cluster 3 compared to every other cluster. The min.pct argument requires a gene to be detected at a minimum percentage of all the cells.
 
+Since we have performed integration in a previous step, we set the default assay back to 'RNA' to ensure we are using the raw counts, rather than counts transformed by integration, for our differential analysis.
 ```{r}
 # We make sure the default assay is set back to "RNA" to use the original counts for DE analysis.
 DefaultAssay(seurat) <- "RNA"
@@ -73,54 +71,68 @@ DefaultAssay(seurat) <- "RNA"
 
 
 ```{r}
-cluster3.markers <- FindMarkers(seurat, ident.1 = 3, min.pct  = 0.25, verbose = F)
+cluster3.markers <- FindMarkers(seurat, 
+                                ident.1 = 3, 
+                                min.pct  = 0.25)
 cluster3.markers %>% head
 ```
 A quick look at the top 6 lines in our differentially expressed marker gene table shows us the format of the data. We have the results of the Wilcoxon rank sum test as a p value and adjusted p value for multiple testing. We also have our average log2 fold change in expression between our clusters. The pct.1 and pct.2 columns show us the percentage of cells within the cluster the gene is expressed in (we set a minimum threshold of 20% in the function). As default, the output table is sorted by adjusted p value.
 
 A little  bit of table manipulation in `dplyr` makes the markers easier to view...
 ```{r}
-cluster3.markers  %>% dplyr::select(avg_log2FC, p_val, p_val_adj) %>%slice_max(n = 5, order_by = avg_log2FC)
+cluster3.markers  %>% 
+  select(avg_log2FC, p_val, p_val_adj) %>%
+  slice_max(n = 5, order_by = avg_log2FC)
 ```
-To check our DE findings, we can visualize expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows expression of a gene (or genes) of interest across all clusters.
+To check our DE findings, we can visualize expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows the expression levels of a gene (or genes) of interest within the cells across all clusters.
 
 ```{r}
 VlnPlot(seurat, features = "LYZ")
 ```
-We can also check which cells express out gene of interest on the UMAP image using `FeaturePlot`
+We can also check which cells express our gene of interest on the UMAP image using `FeaturePlot`
 
 ```{r}
 FeaturePlot(seurat, features = "LYZ")
-
 ```
 Perhaps we are most interested in the differentially expressed genes between clusters 1 and 3
 
 ```{r}
-cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = 3, min.pct = 0.25, verbose = F)
+cluster1.markers <- FindMarkers(seurat, 
+                                ident.1 = 1, 
+                                ident.2 = 3, 
+                                min.pct = 0.25)
 cluster1.markers %>% head()
 ```
 ... or the DE genes between clusters 1 in comparison to 3 and 4?
 ```{r}
-cluster1.markers <- FindMarkers(seurat, ident.1 = 1, ident.2 = c(3,4), min.pct = 0.25, verbose = F)
+cluster1.markers <- FindMarkers(seurat, ident.1 = 1, 
+                                ident.2 = c(3,4), # we can group clusters together!
+                                min.pct = 0.25)
 cluster1.markers %>% head()
 ```
 Usually, we are wanting to find the most differentially expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. This time we will only report the positively expressed markers with a minimum log fold change of 0.25.
 
 ```{r}
-markers <- FindAllMarkers(seurat, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = F)
+markers <- FindAllMarkers(seurat, 
+                          only.pos = TRUE, 
+                          min.pct = 0.25, 
+                          logfc.threshold = 0.25, 
+                          verbose = F) # keeps it quiet!
+markers
+```
 
+Again, a bit of manipulation in `dplyr` enables us to get the top 5 DE genes in each cluster.
+```{r}
 markers %>%
-  dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
+  select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
     group_by(cluster) %>%
     slice_max(n = 5, order_by = avg_log2FC)
 ```
-
-
 ## Exercise
 
 <div class="exercise">
 - Use `FindMarkers` to find the differentially expressed genes in clusters 1 & 2 vs 8
-- Can you use `dplr` to select columns of interest and order them by log fold change?
+- Can you use `dplyr` to select columns of interest and order them by log fold change?
 - Use one of the visualisation tools to look at the expression of one of the top marker genes
 </div>
 
@@ -135,22 +147,21 @@ markers %>%
 
 We may want to share our findings with collaborators or perform further bioinformatic analysis on our DE genes in clusters of interest. In this dataset, the gene level information is given as a gene name. Whilst this is useful we may want to embellish these results with some gene description information or some other gene IDs (eg Ensembl, Entrez).
 
-The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers. These are up to data databases of gene anotation that can be installed like any other biocunductor package
+The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers. These are up to data databases of gene annotation that can be installed like any other bioconductor package
 
 ```{r}
-install.packages("BiocManager")
-BiocManager::install("org.Hs.eg.db")
+# Dont run this if you have run already!
+#install.packages("BiocManager")
+#BiocManager::install("org.Hs.eg.db")
+
+library(org.Hs.eg.db)
 ```
 
-
-In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database. In order to see what we can extract we can run the `columns` function on the annotation database.
+In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database. In order to see what we can extract from the database we can run the `columns` function on the annotation database.
 
 ```{r}
 columns(org.Hs.eg.db) # We can use this command to see which data can be pulled from the database
 ```
-
-
-
 We are going to filter the database by a key or set of keys in order to extract the information we want. Valid names for the key can be retrieved with the `keytypes` function.
 
 ```{r}
@@ -162,7 +173,10 @@ Unfortunately, the authors of `dplyr` and `AnnotationDbi` have both decided to u
 
 AnnotationDbi::select which tells us to use the 'select' function from the AnnotationDBI package.
 ```{r}
-anno <- AnnotationDbi::select(org.Hs.eg.db,keys=rownames(seurat),columns=c("SYMBOL","GENENAME", "ENTREZID"), keytype = "SYMBOL")
+anno <- AnnotationDbi::select(org.Hs.eg.db,
+                              keys=rownames(seurat),
+                              columns=c("SYMBOL","GENENAME", "ENTREZID"),  # info we want to extract
+                              keytype = "SYMBOL") # information we have
 
 # Check it worked!
 head(anno)  
@@ -176,7 +190,6 @@ anno_markers <- markers %>%
 anno_markers %>% head()
 
 ```
-
 At this point we might want to save our result into a nicely formatted file where we can look up our clusters, top DE genes and their gene descriptions.
 
 ```{r}
@@ -185,22 +198,30 @@ anno_markers %>% write_csv("Annotated.results.csv")
 
 # Assigning cluster identity
 
-To assign biological meaning to our clusters, we are going to use canonical cell type markers from the paper. These genes are known to be expressed in a particular cell type.
+If you recall, our dataset is from the following paper:-
+
+> Caron M, St-Onge P, Sontag T, Wang YC et al. Single-cell analysis of childhood leukemia reveals a link between developmental states and ribosomal protein expression as a source of intra-individual heterogeneity. Sci Rep 2020 May15;10(1):8079
+
+This paper uses the following *canonical marker genes* to assign cell cluster identity. This starts to give some *biological meaning* to our results.
+
+These genes are known to be expressed in a particular cell type.
 
 Gene    Cell type
 ----    ----
-CD34    CD79A B cells, 
+CD79A   B Cells
+CD34    CD34+, 
 MS4A1   CD20+ B cells, 
+MZB1    BCMA,
 CST3    Monocytes, 
 SPN   Immature hematopoietic, 
 HBA1    erythrocytes, 
 CD3D    T cells, 
-NKG7    NK cells, 
-MZB1    BCMA
+NKG7    NK cells
+
 
 We can assign these marker genes as a variable
 ```{r}
-cell_markers <- c("CD34", "MS4A1", "CST3" ,"SPN", "HBA1", "CD3D", "NKG7",  "MZB1")
+cell_markers <- c("CD79A","CD34", "MS4A1", "MZB1","CST3" ,"SPN", "KIT", "HBA1", "CD3D", "NKG7")
 ```
 
 Dot plots allow us to examine particular features or genes of interest across all clusters. Creating a dotplot of the cell type markers lets us assign identity based on their expression.
@@ -210,7 +231,21 @@ DotPlot(seurat, features = cell_markers) + theme(axis.text.x = element_text(angl
 We can then manually create new identities for each cluster as follows.
 
 ```{r}
-new.cluster.ids <- c("T Cells", "T Cells", "Erythrocytes",  "Monocytes", "x", "CD79A B cells", "BCMA1", "NK Cells", "x2", "BCMA", "Monocytes", "CD20+ B cells", "BCMA", "Erythrocytes", "BCMA")
+new.cluster.ids <- c("T Cells", #0
+                     "T Cells", #1
+                     "Erythrocytes", #2  
+                     "Monocytes",  #3
+                     "B Cells", #4
+                     "CD34+", #5
+                     "B Cells", #6
+                     "NK Cells", #7
+                     "Immature hema#8topoietic", 
+                     "CD79A B cells",#9 
+                     "Monocytes", #10
+                     "CD20+ B cells", #11
+                     "BCMA", #12
+                     "Erythrocytes", #13 
+                     "BCMA") #14
 names(new.cluster.ids) <- levels(seurat)
 new.cluster.ids
 seurat_named <- RenameIdents(seurat, new.cluster.ids)
@@ -219,6 +254,16 @@ seurat_named <- RenameIdents(seurat, new.cluster.ids)
 ```{r}
 DimPlot(seurat_named, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 ```
+We can check our result to the UMAP plot produced from the full dataset within the paper - not too bad! Considering we have used a subset and not followed their exact method.
+![](images/umaps.png)
+
+```{r}
+# load gene set preparation function
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/gene_sets_prepare.R")
+# load cell type annotation function
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_score_.R")
+```
+
 
 # GO term and pathway enrichment
 
