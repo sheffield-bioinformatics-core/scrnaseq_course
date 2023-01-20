@@ -35,7 +35,7 @@ Firstly, we normalise the expression values. Then we identify highly variable ge
 
 
 ```{r}
-#Re load libraries
+#Re-load libraries
 library(Seurat)
 library(tidyverse)
 ```
@@ -59,7 +59,7 @@ We want to be able to check for potential sources of unwanted variation before w
 summary(filtered_data$nCount_RNA)
 ```
 
-We can use the `NormalizeData` function to use log normalisation to take the sequencing depth into account. `nCount_RNA` for each gene is divided by the total `nCount_RNA` for that cell, and then multiplied by the scale factor (default 10,000). This is natural-log transformed using log1p. ("log1p is the natural logarithm (base e) of 1 + count. The 1 will prevent taking the log of 0.")
+We can use the `NormalizeData` function to use log normalisation to take the sequencing depth into account. `nCount_RNA` for each gene is divided by the total `nCount_RNA` for that cell, and then multiplied by the scale factor (default 10,000). This is natural-log transformed using log1p. 
 
 ```{r}
 filtered_data <- NormalizeData(filtered_data)
@@ -200,14 +200,6 @@ seurat_integrated <- RunUMAP(object = seurat_integrated, dims = 1:30, verbose = 
 **Exercise:** It's a good idea to check what these clusters look like. Make a plot to examine the new PCA and UMAP for the new integrated object. Split the plot so there is 1 for each sample group. Then make another for cell phase.
 </div>
 
-
-```{r}
-DimPlot(seurat_integrated, reduction = "pca", group.by= "ident")
-DimPlot(seurat_integrated, reduction = "umap", group.by= "ident")
-DimPlot(seurat_integrated, reduction = "pca", group.by= "Phase")
-DimPlot(seurat_integrated, reduction = "umap", group.by= "Phase")
-```
-
 We might want to check the numbers as well. We expect the majority of cell type clusters to be present in both samples, however depending on the experiment we might expect condition specific cell types instead.
 
 ```{r}
@@ -235,13 +227,11 @@ When we interpret the elbow plot, we use the 'elbow' to determine the point at w
 
 
 ```{r}
-#Cells 500?
 DimHeatmap(seurat_integrated, dims = 1:10, cells = 100, balanced = TRUE)
 DimHeatmap(seurat_integrated, dims = 10:22, cells = 100, balanced = TRUE)
 ```
 
-
-We can look at the most variable genes driving the PCA
+We can look at the most variable genes driving the PCA:
 
 ```{r}
 print(x = seurat_integrated[["pca"]], 
