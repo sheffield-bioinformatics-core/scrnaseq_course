@@ -17,6 +17,118 @@ grViz(diagram = "digraph flowchart {
       node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
       edge [color = '#440099', penwidth=3]
 
+
+      
+      tab8 [label = '@@8']
+      tab9 [label = '@@9']
+      tab10 [label = '@@10']
+      tab11 [label = '@@11']
+
+      
+            
+      node [fillcolor = '#E7004C']
+      
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
+
+
+
+      
+# set up node layout
+      tab2 -> tab3;
+      tab3 -> tab4;
+      tab4 -> tab5;
+      tab4 -> tab6;
+      tab5 -> tab8;
+      tab6 -> tab8;
+      tab5 -> tab7;
+      tab6 -> tab7;
+      tab7 -> tab8;
+      tab8 -> tab9;
+      tab9 -> tab10;
+      tab10 -> tab11
+      }
+[1]: 'Learning Data Science'
+      [2]: 'Sequence Reads'
+      [3]: 'Generate counts matrix'
+      [4]: 'QC - Subset cells using quality metrics'
+      [5]: 'Log Normalise, Feature selection, Scale'
+      [6]: 'scTransform based normalisation'
+      [7]: 'Integration of multiple datasets'
+      [8]: 'Clustering'
+      [9]: 'Visualisation with UMAP/tSNE'
+      [10]: 'Identification of markers'
+      [11]: 'Pathways/Enrichment analysis'
+      ")
+```
+
+```{r}
+grViz(diagram = "digraph flowchart {
+      # define node aesthetics
+      node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
+      edge [color = '#440099', penwidth=3]
+
+
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']      
+
+      tab10 [label = '@@10']
+      tab11 [label = '@@11']
+
+      
+            
+      node [fillcolor = '#E7004C']
+            tab8 [label = '@@8']
+      tab9 [label = '@@9']
+      
+
+
+
+
+      
+# set up node layout
+      tab2 -> tab3;
+      tab3 -> tab4;
+      tab4 -> tab5;
+      tab4 -> tab6;
+      tab5 -> tab8;
+      tab6 -> tab8;
+      tab5 -> tab7;
+      tab6 -> tab7;
+      tab7 -> tab8;
+      tab8 -> tab9;
+      tab9 -> tab10;
+      tab10 -> tab11
+      }
+[1]: 'Learning Data Science'
+      [2]: 'Sequence Reads'
+      [3]: 'Generate counts matrix'
+      [4]: 'QC - Subset cells using quality metrics'
+      [5]: 'Log Normalise, Feature selection, Scale'
+      [6]: 'scTransform based normalisation'
+      [7]: 'Integration of multiple datasets'
+      [8]: 'Clustering'
+      [9]: 'Visualisation with UMAP/tSNE'
+      [10]: 'Identification of markers'
+      [11]: 'Pathways/Enrichment analysis'
+      ")
+```
+
+```{r}
+grViz(diagram = "digraph flowchart {
+      # define node aesthetics
+      node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
+      edge [color = '#440099', penwidth=3]
+
+
       tab2 [label = '@@2']
       tab3 [label = '@@3']
       tab4 [label = '@@4']
@@ -25,28 +137,46 @@ grViz(diagram = "digraph flowchart {
       tab7 [label = '@@7']
       tab8 [label = '@@8']
       tab9 [label = '@@9']
+
+
+      
+            
+      node [fillcolor = '#E7004C']
+      
+      tab10 [label = '@@10']
+      tab11 [label = '@@11']
+
+
+
+      
 # set up node layout
       tab2 -> tab3;
       tab3 -> tab4;
       tab4 -> tab5;
       tab4 -> tab6;
       tab5 -> tab8;
-      tab6 -> tab8
+      tab6 -> tab8;
       tab5 -> tab7;
       tab6 -> tab7;
       tab7 -> tab8;
-      tab8 -> tab9
+      tab8 -> tab9;
+      tab9 -> tab10;
+      tab10 -> tab11
       }
 [1]: 'Learning Data Science'
       [2]: 'Sequence Reads'
       [3]: 'Generate counts matrix'
       [4]: 'QC - Subset cells using quality metrics'
-      [5]: 'Log Normalise, Variable feature selection, Scale'
+      [5]: 'Log Normalise, Feature selection, Scale'
       [6]: 'scTransform based normalisation'
       [7]: 'Integration of multiple datasets'
-      [8]: 'Clustering and visualisation'
-      [9]: 'Identification of markers'
+      [8]: 'Clustering'
+      [9]: 'Visualisation with UMAP/tSNE'
+      [10]: 'Identification of markers'
+      [11]: 'Pathways/Enrichment analysis'
       ")
 ```
+
+
 
 
