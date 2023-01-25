@@ -53,10 +53,7 @@ You can download the binary files for your distribution from CRAN. Or you can us
 3) Type the following into the R console to install some extra R packages required for the workshop
 
 ```
-install.packages("Seurat")
-install.packages("tidyverse")
-install.packages("org.Hs.eg.db")
-install.packages("rmarkdown")
+source("https://raw.githubusercontent.com/sheffield-bioinformatics-core/scrnaseq_course/main/install_packages.R")
 ```
 
 
