@@ -48,7 +48,7 @@ You can download the binary files for your distribution from CRAN. Or you can us
   
 2) Please download and extract (un-zip) this zip file into the directory on the computer that you wish to work in
 
-- [Course Data]()
+- [Course Data](https://drive.google.com/file/d/1Em7pGgweMOCLxZWNgEle5L2p5ynZsdyt/view?usp=sharing)
 
 3) Type the following into the R console to install some extra R packages required for the workshop
 
@@ -73,16 +73,3 @@ If this is the case, you will need to follow the instructions from this link to 
 
 [https://cran.r-project.org/bin/windows/Rtools/](https://cran.r-project.org/bin/windows/Rtools/)
 
-
-4) Check your installation. You can check everything is installed by copying and pasting this into the R console
-
-```
-source("https://raw.githubusercontent.com/sheffield-bioinformatics-core/r-online/master/check_packages.R")
-
-
-## Feedback
-
-Please let us know what your thought of the course by filling-in this short feedback form
-
-- [Feedback form](https://docs.google.com/forms/d/e/1FAIpQLSduKv0ej_bgAYrK5_5AMfZhdQiOKPYu1ZhbWzHC7v4rRDsZbA/viewform)
-```
