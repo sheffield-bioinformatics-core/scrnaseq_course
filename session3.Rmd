@@ -34,7 +34,7 @@ In the next part of the course we are going to explore the genes that show the m
 * Assign cluster identity using canonical marker genes
 * Carry out a simple pathway analysis
 
-![](images/flowchart2.png)
+![](images/flowchart3.png)
 
 Firstly, we will load up the packages we have been using so far for this part of the course.
 

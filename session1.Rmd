@@ -26,6 +26,9 @@ The *processed* single-cell data for this study have been made available on Gene
 
 *We will only analyse a subset of the dataset during the practical*. However, the other samples are provided if you want extra practice in your own time.
 
+![](images/flowchart1.png)
+
+
 <div class="information">
 Much of the code and information presented in this workshop is *exploratory* rather than describing a strict workflow that must always be followed. In particular, the some of the cut-offs and parameters used **may not be appropriate for your own dataset**. 
 </div>

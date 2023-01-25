@@ -3,13 +3,13 @@ title: "Analysis of Single-Cell RNA-seq - Session 2"
 author: "Niamh Errington"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
-  html_document:
-    toc: yes
-    df_print: paged
   html_notebook:
     toc: yes
     toc_float: yes
     css: stylesheets/styles.css
+  html_document:
+    toc: yes
+    df_print: paged
 ---
 <img src="images/logo-sm.png" style="position:absolute;top:40px;right:10px;" width="200" />
 
@@ -26,6 +26,9 @@ In session 1, we read in our data and created a seurat object. We then performed
 * Execute SCTransform to transform data and regress out unwanted variation
 
 * Build code to integrate data & form clusters
+
+![](images/flowchart2.png)
+
 
 # Normalisation 
 
