@@ -24,17 +24,17 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled the values - regressing out unwanted sources of variation. 
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled the values - regressing out unwanted sources of variation. We have clustered the cells into separate groups based on the similarity of their expression profiles.
 
-In the next part of the course we are going to explore the genes that show the most differences in their expression between clusters. The top genes showing the biggest change in their expression comapred to the other clusters are often called *marker genes*. We can then use these marker genes to assign an *identity class* to our clusters of interest.
+In the next part of the course we are going to explore the genes that show the most differences in their expression between clusters. The top genes showing the biggest change in their expression compared to the other clusters are often called *marker genes*. We can then use these marker genes to assign an *identity class* to our clusters of interest.
+
+![](images/flowchart3.png)
 
 ## Learning Objectives
 * Find differentially expressed genes using `FindMarkers()` and `FindAllMarkers()`.
-* Use the bioconductor human annotation package `org.Hs.eg.db` to add some more further annotation to our marker genes.
-* Assign cluster identity using canonical marker genes
+* Use the bioconductor human annotation package `org.Hs.eg.db` to add some more useful annotation to our marker genes.
+* Assign cluster identity using cell type canonical marker genes
 * Carry out a simple pathway analysis
-
-![](images/flowchart3.png)
 
 Firstly, we will load up the packages we have been using so far for this part of the course.
 
@@ -57,11 +57,11 @@ DimPlot(seurat, reduction = "umap")
 
 
 # Find differentially expressed genes
-Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters but no clue yet what cell groups out clusters contain.
+Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters but no clue yet what cell types our clusters contain.
 
-In Seurat we can find the top differentially expressed genes, or markers, within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
+In Seurat we can find the top differentially expressed genes -or markers - within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
 
-To start with we can find all the differentially expressed genes in cluster 3 compared to every other cluster. The min.pct argument requires a gene to be detected at a minimum percentage of all the cells.
+To start with we can find all the differentially expressed genes in cluster 3 compared to every other cluster. The `min.pct` argument requires a gene to be detected at a minimum percentage of all the cells.
 
 Since we have performed integration in a previous step, we set the default assay back to 'RNA' to ensure we are using the raw counts, rather than counts transformed by integration, for our differential analysis.
 ```{r}
@@ -78,11 +78,11 @@ cluster3.markers %>% head
 ```
 A quick look at the top 6 lines in our differentially expressed marker gene table shows us the format of the data. We have the results of the Wilcoxon rank sum test as a p value and adjusted p value for multiple testing. We also have our average log2 fold change in expression between our clusters. The pct.1 and pct.2 columns show us the percentage of cells within the cluster the gene is expressed in (we set a minimum threshold of 20% in the function). As default, the output table is sorted by adjusted p value.
 
-A little  bit of table manipulation in `dplyr` makes the markers easier to view...
+A littlebit of table manipulation in `dplyr` makes the markers easier to view...
 ```{r}
 cluster3.markers  %>% 
   select(avg_log2FC, p_val, p_val_adj) %>%
-  slice_max(n = 5, order_by = avg_log2FC)
+  slice_max(n = 5, order_by = avg_log2FC) 
 ```
 To check our DE findings, we can visualize expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows the expression levels of a gene (or genes) of interest within the cells across all clusters.
 
@@ -125,7 +125,7 @@ Again, a bit of manipulation in `dplyr` enables us to get the top 5 DE genes in 
 ```{r}
 markers %>%
   select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
-    group_by(cluster) %>%
+    group_by(cluster) %>% # important to look in each cluster!
     slice_max(n = 5, order_by = avg_log2FC)
 ```
 ## Exercise
@@ -134,6 +134,7 @@ markers %>%
 - Use `FindMarkers` to find the differentially expressed genes in clusters 1 & 2 vs 8
 - Can you use `dplyr` to select columns of interest and order them by log fold change?
 - Use one of the visualisation tools to look at the expression of one of the top marker genes
+- Bonus! - We have not discussed the visualisation tool `RidgePlot`. See if you can use it to make another plot of one of the top marker genes. More info here - https://satijalab.org/seurat/articles/visualization_vignette.html
 </div>
 
 ```{r}
@@ -157,21 +158,18 @@ The `org.Hs.eg.db` database is a genome wide annotation package for human that h
 library(org.Hs.eg.db)
 ```
 
-In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database. In order to see what we can extract from the database we can run the `columns` function on the annotation database.
+In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database.
 
-```{r}
-columns(org.Hs.eg.db) # We can use this command to see which data can be pulled from the database
-```
 We are going to filter the database by a key or set of keys in order to extract the information we want. Valid names for the key can be retrieved with the `keytypes` function.
 
 ```{r}
 keytypes(org.Hs.eg.db)
 ```
-We are going to use the keytype 'SYMBOL' which designates the gene names that we have in our rownames of the seurat object.
+We are going to use the keytype 'SYMBOL' which designates the gene names that we have in our rownames of the Seurat object.
 
 Unfortunately, the authors of `dplyr` and `AnnotationDbi` have both decided to use the name `select` in their packages. To avoid confusion and problems from packages attempting to use the wrong tool, the following code is sometimes used:-
 
-AnnotationDbi::select which tells us to use the 'select' function from the AnnotationDBI package.
+`AnnotationDbi::select` which tells us to use the 'select' function from the `AnnotationDBI` package.
 ```{r}
 anno <- AnnotationDbi::select(org.Hs.eg.db,
                               keys=rownames(seurat),
@@ -262,7 +260,7 @@ We can check our result to the UMAP plot produced from the full dataset within t
 # GO term and pathway enrichment
 Sometimes we want to carry out a *Gene Enrichment Analysis* on a list of genes of interest. This enables us to find *functional terms* that are statistically over represented within a group of genes compared to a background list. `clusterProfiler` is an R package that provides statistical tests for expression analysis of terms such as GO (Gene Ontology), within gene lists that have shown statistically significant differences. 
 
-When using this tool we need to have two inputs: a list of genes that show significant differentiation in expression and a list of background genes. Hypergeometric tests are used for statistical enrichment analysis test. 
+When using this tool we need to have two inputs: a list of genes that show significant differentiation in expression and a list of background genes. Hypergeometric tests are used for the statistical enrichment analysis. 
 
 We can check for GO terms measuring BP (biological process), CC (cell component) and MF (molecular function).
 
@@ -286,11 +284,10 @@ go_markers <- anno_markers %>% filter(cluster ==c(0,1)) %>% pull(ENTREZID) # Let
   
 head(eGO)
 ```
-`clusterProfiler` also has functionality to plot pathway diagrams for us.
+`clusterProfiler` also has functionality to plot pathway diagrams for us. It uses our new object created by `enrichGO` as input and highlights the pathways enriched in our dataset.
 
 ```{r}
 plotGOgraph(eGO)
-
 ```
 
 
