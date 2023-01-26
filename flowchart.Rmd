@@ -18,7 +18,9 @@ grViz(diagram = "digraph flowchart {
       edge [color = '#440099', penwidth=3]
 
 
-      
+            tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
       tab8 [label = '@@8']
       tab9 [label = '@@9']
       tab10 [label = '@@10']
@@ -31,9 +33,7 @@ grViz(diagram = "digraph flowchart {
       tab2 [label = '@@2']
       tab3 [label = '@@3']
       tab4 [label = '@@4']
-      tab5 [label = '@@5']
-      tab6 [label = '@@6']
-      tab7 [label = '@@7']
+
 
 
 
@@ -76,9 +76,7 @@ grViz(diagram = "digraph flowchart {
       tab2 [label = '@@2']
       tab3 [label = '@@3']
       tab4 [label = '@@4']
-      tab5 [label = '@@5']
-      tab6 [label = '@@6']
-      tab7 [label = '@@7']      
+    
 
       tab10 [label = '@@10']
       tab11 [label = '@@11']
@@ -88,6 +86,9 @@ grViz(diagram = "digraph flowchart {
       node [fillcolor = '#E7004C']
             tab8 [label = '@@8']
       tab9 [label = '@@9']
+            tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']  
       
 
 
