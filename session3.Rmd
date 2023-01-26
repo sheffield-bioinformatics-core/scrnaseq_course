@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data, selected the most variable features and scaled the values - regressing out unwanted sources of variation. We have clustered the cells into separate groups based on the similarity of their expression profiles.
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data via sctransform - regressing out unwanted sources of variation, and integrated across our datasets. Lastly, we have clustered the cells into separate groups based on the similarity of their expression profiles.
 
 In the next part of the course we are going to explore the genes that show the most differences in their expression between clusters. The top genes showing the biggest change in their expression compared to the other clusters are often called *marker genes*. We can then use these marker genes to assign an *identity class* to our clusters of interest.
 
