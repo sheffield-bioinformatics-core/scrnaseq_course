@@ -8,11 +8,14 @@ output: html_notebook
 
 ```{r}
 #install.packages("DiagrammeR")
+library(tidyverse)  # for %>% pipes
 library(DiagrammeR)
+library(DiagrammeRsvg)  # for conversion to svg
+library(rsvg)  # for saving svg
 ```
 
 ```{r}
-grViz(diagram = "digraph flowchart {
+g <- grViz(diagram = "digraph flowchart {
       # define node aesthetics
       node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
       edge [color = '#440099', penwidth=3]
@@ -64,10 +67,18 @@ grViz(diagram = "digraph flowchart {
       [10]: 'Identification of markers'
       [11]: 'Pathways/Enrichment analysis'
       ")
+
+g %>% 
+  export_svg() %>% 
+  charToRaw %>% 
+  rsvg_png("images/flowchart1.png")
+
+g
+  
 ```
 
 ```{r}
-grViz(diagram = "digraph flowchart {
+g <- grViz(diagram = "digraph flowchart {
       # define node aesthetics
       node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
       edge [color = '#440099', penwidth=3]
@@ -121,10 +132,17 @@ grViz(diagram = "digraph flowchart {
       [10]: 'Identification of markers'
       [11]: 'Pathways/Enrichment analysis'
       ")
+
+g %>% 
+  export_svg() %>% 
+  charToRaw %>% 
+  rsvg_png("images/flowchart2.png")
+
+g
 ```
 
 ```{r}
-grViz(diagram = "digraph flowchart {
+g <- grViz(diagram = "digraph flowchart {
       # define node aesthetics
       node [fontname = Arial, shape = oval, color = '#9ADBE8', style = filled, fontsize =20]  
       edge [color = '#440099', penwidth=3]
@@ -176,6 +194,13 @@ grViz(diagram = "digraph flowchart {
       [10]: 'Identification of markers'
       [11]: 'Pathways/Enrichment analysis'
       ")
+
+g %>% 
+  export_svg() %>% 
+  charToRaw %>% 
+  rsvg_png("images/flowchart3.png")
+
+g
 ```
 
 
