@@ -16,7 +16,8 @@ We will focus specifically on data generated using the 10X protocol, although th
 
 ## Schedule (Provisonal)
 
-### Monday 23rd January
+### Monday 30th January, 2023
+
 
 - 09:30 - 11:00 Introduction and quality assessment
 - 11:15 - 12:30 Normalisation and sources of variation
