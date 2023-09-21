@@ -69,7 +69,7 @@ We are going to import the data for the first healthy sample - `GSM3872442` The 
 list.files("GSE132509/GSM3872442/")
 ```
 
-It is then a two-step process to create a object that `Seurat` can use for analysis.
+It is then a two-step process to create a object that `Seurat` can use for analysis. An *object* is an R data structure that Seurat uses to organise our single cell data.
 
 ```{r}
 ## Read all the files into a 'sparse matrix'
