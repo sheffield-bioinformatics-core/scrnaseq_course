@@ -1,6 +1,6 @@
 ---
 title: "Analysis of Single-Cell RNA-seq - Session 2"
-author: "Niamh Errington"
+author: "Niamh Errington, Emily Chambers"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
   html_notebook:
@@ -15,137 +15,185 @@ output:
 
 # Introduction
 
-In session 1, we read in our data and created a seurat object. We then performed some quality control, and subset the data according to the QC plots we generated. In this session, we are going to normalise the data, select the most variable features and scale,regressing out unwanted sources of variation. 
+In session 1, we read in our single cell RNA-seq data and created a Seurat object in R. We then performed some quality control to assess for poor quality/empty cells, and subset the data according to the QC plots we generated. 
 
-## Learning Objectives
+In this session, we are going to *normalise* the data, select the genes/features that are most variable between cells and scale the data,regressing out unwanted sources of variation. 
 
-* Build code to normalise data 
+# Learning Objectives
 
-* Identify unwanted sources of variation in the data & find variable genes
+* Learn the commands in Seurat to normalise, find variable features and scale our data
 
-* Execute SCTransform to transform data and regress out unwanted variation
+* Learn how to perform PCA on the data and why we do this
 
-* Build code to integrate data & form clusters
+* Identify unwanted sources of variation in the data & find genes variable between cells
+
+* Execute SCTransform to transform data and regress out unwanted variation (noise)
+
+* Learn the commands in Seurat to integrate data & form clusters
 
 ![](images/flowchart2.png)
 
 
-# Normalisation 
+# Sources of variation
 
-Now that we have our high quality cells, there are still a few steps left before we can cluster cells. 
+Now that we have our high quality cells, there are still a few steps left before we can cluster cells by their expression profiles. 
 
-Firstly, we normalise the expression values. Then we identify highly variable genes. Next, data is scaled and unwanted effects regressed out. Then we integrate samples together, and finally, we do dimension reduction.
+Firstly, lets load in our data from the first session if we haven't got it already loaded.
 
 
 ```{r}
-#Re-load libraries
+#Re-load libraries if needed
 library(Seurat)
 library(tidyverse)
 ```
 
 ```{r}
-#Reload R objects if necessary 
-filtered_data <- readRDS("Robjects/seurat_filtered.RDS")
+#Reload R objects if needed
+filtered_data <- readRDS("Robjects/seurat_filtered_BACKUP.RDS")
 ```
 
+Our end goal is to identify groups of cells that show interesting biological variation. However at the moment our data contains lots of potentially **unwanted variation** and **noise**. We have expression of many genes across many cells in multiple samples! This is an example of *high dimensional data*.
 
-# Sources of Variation
+Sources of variation -
+- Differences in sequencing depth (This is also common to bulk seq)
+- Influential cell cycle genes can drive a lot of variation
+- Poor quality cells (Hopefully we have removed these in the first session!)
 
-- Goal is to identify clusters that show interesting biological variation between cells.
-- Differences in sequencing depth is common to bulk seq
-- Cell cycle is often influential
-- Can identify cell cycle status using a few key genes
+# Normalisation
 
-We want to be able to check for potential sources of unwanted variation before we do our normalisation and regresssion of unwanted variation. One of the most common sources of unwanted variation is cell cycle. Before we can check for this, we need the counts to be comparable between cells, currently each cell has a different number for `nCount_RNA` (the number of UMI).
+First of all we want to be able to compare gene expression between cells, do do this we need to normalise for sequencing depth. Currently each cell has a different number for `nCount_RNA` (the number of UMI).
+
 
 ```{r}
 summary(filtered_data$nCount_RNA)
 ```
 
-We can use the `NormalizeData` function to use log normalisation to take the sequencing depth into account. `nCount_RNA` for each gene is divided by the total `nCount_RNA` for that cell, and then multiplied by the scale factor (default 10,000). This is natural-log transformed using log1p. 
+We can use the `NormalizeData` function to use log normalisation to take the sequencing depth into account. 
+
+Briefly, this normalises the gene expression measurements for each cell by the total expression, multiplies this by a scale factor, and log-transforms the result. Now we can directly compare expression between cells.
 
 ```{r}
-filtered_data <- NormalizeData(filtered_data)
+seurat_data <- NormalizeData(filtered_data)
 ```
 
-We determine which phase of the cell cycle a cell is in, based on it's expression of phase markers. We've included the list we need here as a txt, but some other organisms can be found [here](https://github.com/hbc/tinyatlas/tree/master/cell_cycle), as well as a resource [here](https://hbctraining.github.io/scRNA-seq_online/lessons/cell_cycle_scoring.html) for finding cell markers for other organisms.
+# Find Variable Features
 
-```{r}
-cc_genes <- read.delim("regev_lab_cell_cycle_genes.txt")[,1]
-s_genes <- cc_genes[1:43]
-g2m_genes <- cc_genes[44:97]
+At this point we want to define the features or genes that are the **most variable** in our dataset. Ie, the genes that are showing most differences in expression within our dataset and are likely to be the most informative for defining clusters of cell types. 
 
-seurat_phase <- CellCycleScoring(filtered_data, 
-                                 g2m.features = g2m_genes, 
-                                 s.features = s_genes)
-
-# View cell cycle scores and phases assigned to cells                                 
-View(seurat_phase@meta.data)  
-```
-
-Each cell is given a score, based on it's expression of the phase markers using the `CellCycleScoring()` function. We now have 3 new columns. The highest score between S.Score and G2M.Score determines the phase. If both columns are negative, then the phase is G1. A bar plot shows us how many cells are in each phase. 
-
-```{r}
-as_tibble(seurat_phase[[]]) %>% ggplot(aes(x = Phase, fill = Phase))+ geom_bar()
-```
-
-Find features that define clusters, using the `FindVariableFeatures` function. Seurat does this by calculating a normalised intensity for each gene, then selecting the top 'n' most variable features, in our case, the top 2000 genes. The samples contain PBMCs, so seeing immune-related genes in the top 20 is in line with what we would expect.
+Find features that define clusters, using the `FindVariableFeatures` function. Seurat does this by calculating a normalised intensity for each gene, then selecting the top 'n' most variable features, usually 2000. The samples contain PBMCs, so seeing immune-related genes in the top 20 is in line with what we would expect.
 
 ```{r}
 # Identify the most variable genes
-seurat_phase <- FindVariableFeatures(seurat_phase, 
-                     selection.method = "vst",
-                     nfeatures = 2500, #default
-                     verbose = FALSE)
+seurat_data <- FindVariableFeatures(seurat_data)
 
 # Identify the top 20 most highly variable genes. We need the VariableFeatures function to pull the names
-top20 <- head(VariableFeatures(seurat_phase), 20)
+top20 <- head(VariableFeatures(seurat_data), 20)
+top20
 
-# The variablity can be accessed using the HVFInfo function
-var.data <- as_tibble(HVFInfo(seurat_phase), rownames = "Gene") %>% mutate(Included = Gene %in% VariableFeatures(seurat_phase))
 
 # Plot the variable features
-VarPlot<- VariableFeaturePlot(seurat_phase)
+VarPlot<- VariableFeaturePlot(seurat_data, )
+LabelPoints(plot = VarPlot, points = top20, repel = TRUE)
 
-LabelPoints(plot = VarPlot, points = top20, repel = TRUE,  xnudge = 0, ynudge = 0)
 ```
+# Scale
 
-We're finally ready to see if cell cycle is a driving factor of variation, using PCA. After finding the most variable gene features (above), we scale the data to account for these highly variable genes. The `ScaleData` function will do this for us, such that the mean expression in each cell is 0, with a variance of 1. This ensures highly-expressed genes are not dominating, as we don't want the high expression values to be the only thing reflected in the highly variable genes. 
+The next step is to scale the data which applies a linear transformation to the data that is a standard pre-processing step prior to dimensional reduction techniques like PCA. It stops highly expressed genes dominating the analysis.
 
 ```{r}
-# Scale the counts
-seurat_phase <- ScaleData(seurat_phase)
+seurat_data <- ScaleData(seurat_data)
+```
 
+
+
+# PCA
+
+As we mentioned earlier, the data is *high dimensional data*. This basically means we have many observations (cells) and many features(genes). This makes it impossible to discern patterns in expression to a human viewer! We need to use dimensional reduction techniques to increase the interpretability of the data - *without* losing too much meaningful information.
+
+To do this we use a Principal Component Analysis or PCA. This breaks down multivariate data table as smaller set of variables or summary indices in order to observe patterns and outliers. It has many uses for interpreting multivariate data.
+
+The good news is, this is a simple command to run.
+
+```{r}
 # Perform PCA
-seurat_phase <- RunPCA(seurat_phase)
+seurat_data <- RunPCA(seurat_data)
 ```
 
-Let's visualise the PCA. The plots for each phase look quite different, so we'll need to regress out cell cycle variation. 
+Lets have a look at how cthe two samples drives the observed variation in our PCA plot
 
 ```{r}
-# Plot the PCA colored by cell cycle phase
-DimPlot(seurat_phase, reduction = "pca",group.by = "Phase")
+DimPlot(seurat_data , group.by = "orig.ident")
 ```
 
+## Cell Cycle Genes
 
-Mitochondrial genes can also affect clusters. 
+**Cell cycle genes** can often have strong effects within groups of cells and cause a lot of the inter cellular variation. This results with cells being clustered by their cell cycle stage instead of the cell type or condition.
+
+To mitigate this, we can **identify** cell cycle stage by using known marker genes of the cell cycle and **regressing out** these effects.
+
+![*We want to avoid this!*](images/cc_score-2.png)
+
+Helpfully, the known cell phase marker genes from Tirosh et al, 2015 are included in Seurat by default.
 
 ```{r}
-summary(seurat_phase$mito.ratio)
-seurat_phase$mito.cat <- cut(seurat_phase$mito.ratio, breaks=c(-Inf,0.02036  , 0.03330 ,0.04558 ,Inf),labels=c("Low","Medium","Medium High","High"))
+#Here they are!
+cc.genes
 
-DimPlot(seurat_phase,
-        reduction = "pca",
-        group.by= "mito.cat")
+
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+
+# We also have this list saved if it hasn't loaded
+# read.delim("regev_lab_cell_cycle_genes.txt")[,1]
+```
+<div class="information">
+
+Other organisms phase genes can be found [here](https://github.com/hbc/tinyatlas/tree/master/cell_cycle)
+
+</div>
+
+We can now use the `CellCycleScoring` function in Seurat to 'score' or identify each cell's cell cycle phase based on the expression of these genes within that cell.
+
+```{r}
+seurat_data <- CellCycleScoring(seurat_data, 
+                                 g2m.features = g2m.genes, 
+                                 s.features = s.genes)
+
+                              
+seurat_data@meta.data %>% select(S.Score, G2M.Score, Phase)
+```
+
+We now have 3 new columns in our metadata. The highest score between S.Score and G2M.Score determines the phase. If both columns are negative, then the phase is G1. A bar plot shows us how many cells are in each phase. 
+
+```{r}
+as_tibble(seurat_data[[]]) %>% ggplot(aes(x = Phase, fill = Phase))+ geom_bar()
+```
+Lets have a look at how cell cycle phase drives the observed variation in our PCA plot
+
+```{r}
+DimPlot(seurat_data , group.by = "Phase")
+```
+
+## Mitochondrial genes 
+Mitochondrial genes expression can also be a big contributer of variation. 
+
+```{r}
+# Catogorise the % of mitochondrial genes expressed in cells into low, medium and high
+seurat_data$mito.cat <- cut(seurat_data$mito.ratio, breaks = 3, labels=c("Low","Medium", "High"))
+
+DimPlot(seurat_data,  reduction = "pca",  group.by= "mito.cat")
 
 ```
 
 
 # SCTransform
 
-We decide to regress for mitochondrial ratio, number of UMI and cell-cycle status. First we split the object into a list of subsetted objects, where there is 1 for each sample. This step might take a while. 
+We decide to regress for mitochondrial ratio and cell-cycle status. We need to do this for each sample so first we split the object into a list of subsetted objects.
 
-SCTransform does the data normalisation, data scaling & finding of variable features. Sequencing depth is automatically regressed out, but it doesn't hurt to include nUMI in our list of variables to regress so we can follow.
+SCTransform is a newer addition to the Seurat package. It allows us to do the data normalisation, data scaling & finding of variable features in on simple step. 
+
+It is a seperate and more statistically robust version of the steps we have done above. Importantly it allows us to regress out any sources of variation we have found in the above steps.
+
 
 ```{r message=FALSE}
 seurat_split <- SplitObject(seurat_phase, split.by = "SampleName")
