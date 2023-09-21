@@ -1,9 +1,11 @@
 ---
-title: "Analysis of Single-Cell RNA-seq - Session 4"
+title: 'Analysis of Single-Cell RNA-seq - Session 4'
 author: "Emily V Chambers"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
-output: 
-  html_notebook: 
+output:
+  pdf_document:
+    toc: yes
+  html_notebook:
     toc: yes
     toc_float: yes
     css: stylesheets/styles.css
@@ -118,7 +120,7 @@ markers <- FindAllMarkers(seurat,
                           min.pct = 0.25, 
                           logfc.threshold = 0.25, 
                           verbose = F) # keeps it quiet!
-markers
+markers %>% head()
 ```
 
 Again, a bit of manipulation in `dplyr` enables us to get the top 5 DE genes in each cluster.
@@ -286,8 +288,7 @@ head(eGO)
 ```
 `clusterProfiler` also has functionality to plot pathway diagrams for us. It uses our new object created by `enrichGO` as input and highlights the pathways enriched in our dataset.
 
-```{r}
-plotGOgraph(eGO)
+```{r}plotGOgraph(eGO)
 ```
 
 
