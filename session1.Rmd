@@ -47,9 +47,13 @@ install.packages("tidyverse")
 install.packages("Seurat")
 ```
 
+<div class="warning">
+NOTE: Seurat is in the process of being upgraded from Seurat 4 to Seurat 5. This is a major package upgrade expected to be complete in **October 2023**. For the purposes of this course we will continue with Seurat 4 until Seurat 5 is fully released. For more information click [here](https://satijalab.org/seurat/articles/get_started_v5).
+</div>
+
 # Data Import
 
-We start by importing the sample information for the dataset. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
+We start by importing the sample information for the dataset into R. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
@@ -225,7 +229,7 @@ We can now look at the relationship between the number of UMI and number of gene
 ```
 
 ![](images/uMI_vs_gene.png)
-
+# EMILY- REMINDER DO WE NEED THE BELOW NOVELTY SCORING?
 
 We would ideally like each cell to be measuring as many genes as possible. We can assess this by defining a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. If this score is low for a particular cell it means that there is not a wide variety of genes that have been sequenced in the cell. Even though the `nUMI` might be high for such cells, the same genes have been sequenced repeatedly. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution. **The score is expected to be around 0.8 for good quality cells**
 
@@ -364,6 +368,11 @@ filtered_counts <- counts[keep_genes, ]
 
 ## make a new Seurat object
 filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
+
+
+# EMILY NOTE - CAN CAN DO THIS EASIER BELOW?
+#CreateSeuratObject(min.cells = 10)
+
 ```
 
 
