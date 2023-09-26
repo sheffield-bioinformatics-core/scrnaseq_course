@@ -19,9 +19,9 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 # Introduction
 
-In session 1, we read in our single cell RNA-seq data from 10X and created a Seurat object in R. We then performed some quality control to assess for poor quality/empty cells, and subset the data according to the QC plots we generated. 
+In Session 1, we read in our single cell RNA-seq data from 10X and created a Seurat object in R. We then performed some quality control to assess for poor quality/empty cells, and subset the data according to the QC plots we generated. 
 
-In this session, we are going to normalise the data, select the genes/features that are most variable between cells and scale the data,regressing out unwanted sources of variation. We are also going to visualise out data using t-SNE and UMAP plots and cluster our cells
+In this Session, we are going to normalise the data, select the genes/features that are most variable between cells and scale the data, regressing out unwanted sources of variation. We are also going to visualise out data using t-SNE and UMAP plots and cluster our cells
 
 # Learning Objectives
 
@@ -33,7 +33,7 @@ In this session, we are going to normalise the data, select the genes/features t
 
 * Use SCTransform to transform data and regress out unwanted variation 
 
-* Integrate multiple datasets to remove bacth effects 
+* Integrate multiple datasets to remove batch effects 
 
 * t-SNE and UMAP plots
 
@@ -84,7 +84,7 @@ We can use the `NormalizeData` function to use log normalisation to take the seq
 Briefly, this normalises the gene expression measurements for each cell by the total expression, multiplies this by a scale factor, and log-transforms the result. Now we can directly compare expression between cells.
 
 ```{r}
-seurat_data <- NormalizeData(filtered_data)
+seurat_data <- NormalizeData(seurat_data)
 
 ```
 
@@ -92,7 +92,7 @@ seurat_data <- NormalizeData(filtered_data)
 
 At this point we want to define the features or genes that are the **most variable** in our dataset. ie, the genes that are showing most differences in expression within our dataset and are likely to be the most informative for defining clusters of cell types. 
 
-We find features that define clusters, using the `FindVariableFeatures` function. Seurat does this by calculating a normalised intensity for each gene, then selecting the top 'n' most variable features, usually 2000. The samples contain human peripheral blood mononuclear cells (PBMCs), so seeing immune-related genes in the top 20 is in line with what we would expect.
+We find features that define clusters, using the `FindVariableFeatures` function. Seurat does this by calculating a normalised intensity for each gene, then selecting the top 'n' most variable features (usually 2000). The samples in our dataset derive from human peripheral blood mononuclear cells (PBMCs), so seeing immune-related genes in the top 20 is in-line with what we would expect.
 
 ```{r}
 # Identify the most variable genes
@@ -111,7 +111,7 @@ LabelPoints(plot = VarPlot, points = top20, repel = TRUE)
 ```
 ## Scale
 
-The next step is to scale the data which applies a linear transformation to the data that is a standard pre-processing step prior to dimensional reduction techniques like PCA. It stops highly expressed genes dominating the analysis.
+The next step is to scale the data - which applies a linear transformation to the data that is a standard pre-processing step prior to dimensional reduction techniques like PCA. It stops highly expressed genes dominating the analysis.
 
 ```{r}
 seurat_data <- ScaleData(seurat_data)
@@ -121,35 +121,36 @@ seurat_data <- ScaleData(seurat_data)
 
 # PCA
 
-As we mentioned earlier, the data is *high dimensional data*. This basically means we have many observations (cells) and many features (genes). This makes it impossible to discern patterns in expression to a human viewer! We need to use dimensional reduction techniques to increase the **interpretability** of the data - *without* losing too much meaningful information.
+As we mentioned earlier, the data are *high dimensional data*. This basically means we have many observations (cells) and many features (genes). This makes it impossible to discern patterns in expression to a human viewer! We need to use dimensional reduction techniques to increase the **interpretability** of the data - *without* losing too much meaningful information.
 
-To do this we use a Principal Component Analysis or PCA. This breaks down multivariate data table as smaller set of variables or summary indices in order to observe patterns and outliers. It has many uses for interpreting multivariate data.
+To do this we use a Principal Component Analysis or **PCA**. This breaks down multivariate data table as smaller set of variables or summary indices in order to observe patterns and outliers. It has many uses for interpreting multivariate data.
 
 <div class="information">
-If you are interested in learning more about PCA and want to understand the mathematical principles behind the method then there are plenty of online resouces to explore further:
-https://builtin.com/data-science/step-step-explanation-principal-component-analysis
+If you are interested in learning more about PCA and want to understand the mathematical principles behind the method, there are plenty of online resources to explore further:
 
-Youtube video from StatQuest - https://www.youtube.com/watch?v=FgakZw6K1QQ
+- https://builtin.com/data-science/step-step-explanation-principal-component-analysis
+
+- Youtube video from StatQuest - https://www.youtube.com/watch?v=FgakZw6K1QQ
 
 </div>
 
-The good news is, this is a simple command to run.
+The good news is that, despite the complex mathematics going-on behind the scenes, this is a simple command to run.
 
 ```{r, message=TRUE}
 # Perform PCA
 seurat_data <- RunPCA(seurat_data)
 ```
-The command prints out some information on the **principal components** ie PC_1, PC_1 and groups the genes that are  behaving similarly. PC1 representing the most variation in the data and PC2 representing the second most variation in the data
+The command prints out some information on the **principal components** ie PC_1, PC_1 and groups the genes that are behaving similarly. PC1 representing the most variation in the data and PC2 representing the second most variation in the data
 
 ## Elbowplot
 
-We can also see how much variance is explained by each principle component byt using  `ElbowPlot`.
+We can see how much variance is explained by each principal component by using the`ElbowPlot` function. The point at which the plot starts to level out is usually taken as guidance for the number of principal components to use in the analysis.
 
 ```{r}
 ElbowPlot(seurat_data, reduction = "pca", ndims = 50)
 ```
 
-Looking at the above 'elbow plot', we can see that the top 9 PCs  contain a lot of the information, while other PCs contain progressively less. However, it is still advisable to use more PCs in further analysis since they might contain information about rare cell types.
+Looking at the above 'elbow plot', we can see that the top 9 PCs contain a lot of the information, while other PCs contain progressively less. However, it is still advisable to use more PCs in further analysis since they might contain information about rare cell types.
 
 
 We can look at the most variable genes driving the PCA:
@@ -159,6 +160,7 @@ print(x = seurat_data[["pca"]],
       dims = 1:5, #Top 5 PCs 
       nfeatures = 5) #Top 5 Genes
 ```
+
 In PC1 we can start to see known cell type markers such as CD3D, a T Cell marker. **Encouraging signs!**
 
 ## Dimensionality Reduction Plots (DimPlot)
@@ -167,7 +169,7 @@ Now that we have carried out a PCA on our dataset we can visualise our whole dat
 
 To do that we need to use a Seurat function called `DimPlot` . This is short for Dimensional reduction plot and shows us a 2D scatter plot showing each cell according to the dimensionality reduction technique carried out on the data. 
 
-In this case we have done a PCA and we can look at the first two principle components. By default, cells are colored by their identity class (can be changed with the group.by parameter).
+In this case we have done a PCA and we can look at the first two principal components. By default, cells are colored by their identity class (this can be changed with the `group.by` parameter).
 
 ```{r}
 DimPlot(seurat_data ,reduction = "pca")
@@ -175,11 +177,13 @@ DimPlot(seurat_data ,reduction = "pca")
 DimPlot(seurat_data ,reduction = "pca", group.by = "SampleName")
 
 ```
+
+
 # Feature Regression
 
 ## Cell Cycle Genes
 
-**Cell cycle genes** can often have strong effects within groups of cells and cause a lot of the inter cellular variation. This results with cells being clustered by their cell cycle stage instead of the cell type or condition.
+**Cell cycle genes** can often have strong effects within groups of cells and cause a lot of the inter-cellular variation. This results with cells being clustered by their cell cycle stage instead of the cell type or condition.
 
 To mitigate this, we can **identify** cell cycle stage by using known marker genes of the cell cycle and **regressing out** these effects.
 
@@ -211,6 +215,13 @@ seurat_data <- CellCycleScoring(seurat_data,
 
                               
 seurat_data@meta.data %>% select(S.Score, G2M.Score, Phase)
+```
+
+## MD - Useful to plot this as a scatter plot?
+
+```{r}
+seurat_data@meta.data %>% select(S.Score, G2M.Score, Phase) %>% 
+  ggplot(aes(x = S.Score, y = G2M.Score, col = Phase)) + geom_point()
 ```
 
 We now have 3 new columns in our metadata. The highest score between S.Score and G2M.Score determines the phase. If both columns are negative, then the phase is G1. A bar plot shows us how many cells are in each phase. 
@@ -249,9 +260,9 @@ DimPlot(seurat_data,  reduction = "pca",  group.by= "mito.cat")
 
 We decide to **regress** for mitochondrial ratio and cell-cycle status. This prevents these variables from contributing so much to the PCA dimensional reduction.
 
-We need to do this for each sample (not the merged dataset) so first we split the object into a list of subsetted objects.
+We need to do this for each sample separately (i.e. not the merged dataset), so first we "split" the object into a list of subsetted objects.
 
-SCTransform is a newer addition to the Seurat package. It allows us to do the data normalisation, data scaling & finding of variable features in one simple step. 
+`SCTransform` is a newer addition to the `Seurat` package. It allows us to do the data normalisation, data scaling & finding of variable features in one simple step. 
 
 It is a separate and more statistically robust version of the steps we have done above. Importantly it allows us to regress out any sources of variation we have found in the above steps.
 
@@ -265,14 +276,32 @@ seurat_split$PBMMC_2 <- SCTransform(seurat_split$PBMMC_2, vars.to.regress = c("m
   
 ```
 
-# Integration
+<div class="information">
 
-Before we can carry out a thorough analysis of the single cell clusters and visualise them we need to address the possibility that **batch effects** are influencingour datasets.
+If you have a larger number of samples, you will probably find it more efficient to use a `for` loop to run this step. We briefly covered for loops in the Appendix of Session 1. The code would look like this:-
 
-### Whats a batch effect?
+```
+for(i in 1:length(seurat_split)){
+  seurat_split[[i]] <- SCTransform(seurat_split[[i]], vars.to.regress = c("mito.ratio","S.Score","G2M.Score"), vst.flavor = "v1" , verbose = F)
+}
+```
+
+</div>
 
 <div class="information">
-A batch effect occurs when technical factors in an experiment cause changes in the data produced by the experiment. 
+
+For your own dataset, you will need to consider what variables need to be regressed. There may be other sources of variation that we have not considered for this dataset. If in doubt - consult your local Bioinformatician.
+</div>
+
+
+# Integration
+
+Before we can carry out a thorough analysis of the single cell clusters and visualise them we need to address the possibility that **batch effects** are influencing our datasets.
+
+### What is a batch effect?
+
+<div class="information">
+A batch effect occurs when technical factors in an experiment cause changes in the data produced by the experiment. They have been observed throughout the entire history of high-throughput gene expression studies and are still as relevant in modern technologies.
 
 In this case we have two separate samples. These could have been produced in the lab on separate days by different people using different techniques, equipment etc. They could even be from **entirely different experiments**.
 
@@ -287,7 +316,7 @@ There are 4 steps for integration:
 
 1. Select variable features for integration by taking the highly variable genes from each sample.
 
-2. Prepare the SCTransform object for integration
+2. Prepare the `SCTransform` object for integration
 
 3. Identify 'anchors' between cells. These are mutual nearest neighbours across the data. For each cell, the closest neighbour is identified based on gene expression. If the neighbour's closest neighbour is the original cell, these will be marked as 'anchors' for the data. 
 
@@ -314,7 +343,7 @@ seurat_integrated <- IntegrateData(anchorset = integ_anchors,normalization.metho
 
 We need to re-run PCA on our new integrated dataset. The data is now different as we have regressed out mitochondrial effects, cell cycle effects and removed 'batch' effects between samples by integration.
 
-After PCA we should hopefully have the most informative genes for our experiment within the top principle components.
+After PCA we should hopefully have the most informative genes for our experiment within the top principal components.
 
 ```{r}
 # Run PCA
@@ -326,7 +355,7 @@ seurat_integrated <- RunPCA(object = seurat_integrated)
 
 t–Stochastic Neighbourhood Embedding (t-SNE) and Uniform Manifold Approximation and Projection (UMAP) are dimensionality reduction techniques which allow us to **graphically** simplify a large dataset. They are similar to PCA however they are non linear and produce a 2D separation of the data, rather than producing many components. This allows us to view the data on a 2D plot.
 
-Their main function is to calculate the 'distance' between a cell's expression profile compared to a number of its neighbours and represent that information in a lower dimension - ie to simplify it.
+Their main function is to calculate the 'distance' between a cell's expression profile compared to a number of its neighbours and represent that information in a lower dimension - i.e to simplify it.
 
 ### The core differences
 
@@ -394,7 +423,7 @@ We should start to see an organised **structuring** or our data now. The cells a
 
 Now that we have our t-SNE and UMAP reductions we can explore additional metrics and see how they influence our groups of cells. 
 
-Feature plots are similar to `DimPlots` except they visualise continuous *features*. For example gene expression. We can also examine other continuous data such as number of UMI, number of genes etc...
+Feature plots are similar to `DimPlots`, except they visualise continuous *features*. For example gene expression. We can also examine other continuous data such as number of UMI, number of genes etc...
 
 ```{r}
 FeaturePlot(seurat_integrated, 
@@ -404,6 +433,8 @@ FeaturePlot(seurat_integrated,
 
 ```
 We can also take a look here at a particular gene of interest...
+
+
 ```{r}
 
 #CD3D is a T cell marker gene
@@ -430,7 +461,7 @@ Briefly, this is done in Seurat by using a shared nearest neighbor (SNN) modular
 
 For a full description of the algorithms, see Waltman and van Eck (2013) 
 
-Theres also a stat quest video on the similar K-nearest neighbours here https://www.youtube.com/watch?v=HVXime0nQeI
+There is also a "stat quest" video on the similar K-nearest neighbours here https://www.youtube.com/watch?v=HVXime0nQeI
 
 </div>
 
@@ -445,7 +476,7 @@ We can use the `DimPlot` function again to plot our new clusters.
 DimPlot(seurat_integrated, label = TRUE)
 ```
 
-Save the Seurat data as an R object again.
+Finally, we save the Seurat data as an R object again.
 
 ```{r}
 saveRDS(seurat_integrated, file = "Robjects/seurat_integrated.RDS")
