@@ -1,14 +1,14 @@
 ---
-title: 'Analysis of Single-Cell RNA-seq - Session 4'
+title: 'Analysis of Single-Cell RNA-seq - Session 3'
 author: "Emily V Chambers"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
-  pdf_document:
-    toc: yes
   html_notebook:
     toc: yes
     toc_float: yes
     css: stylesheets/styles.css
+  pdf_document:
+    toc: yes
 ---
 <img src="images/logo-sm.png" style="position:absolute;top:40px;right:10px;" width="200" />
 
@@ -33,6 +33,7 @@ In the next part of the course we are going to explore the genes that show the m
 ![](images/flowchart3.png)
 
 ## Learning Objectives
+
 * Find differentially expressed genes using `FindMarkers()` and `FindAllMarkers()`.
 * Use the bioconductor human annotation package `org.Hs.eg.db` to add some more useful annotation to our marker genes.
 * Assign cluster identity using cell type canonical marker genes
@@ -48,11 +49,13 @@ And then we can load up the R objects we have used in the previous sessions.
 ```{r}
 seurat <- readRDS("Robjects/seurat_integrated.RDS")
 ```
+
 We can simply run the name of the Seurat object (in our case `seurat`) to give us a summary of what the object contains and what calculations have been performed on it.
+
 ```{r}
 seurat
 ```
-We can recap our clusters by taking a look at the `DimPlot`
+We can recap our clusters by taking a look at the dimensionality reduction plot - `DimPlot`
 ```{r}
 DimPlot(seurat, reduction = "umap")
 ```
@@ -61,58 +64,10 @@ DimPlot(seurat, reduction = "umap")
 # Find differentially expressed genes
 Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters but no clue yet what cell types our clusters contain.
 
-In Seurat we can find the top differentially expressed genes -or markers - within each cluster. The function `FindMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes within a particular cluster. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
-
-To start with we can find all the differentially expressed genes in cluster 3 compared to every other cluster. The `min.pct` argument requires a gene to be detected at a minimum percentage of all the cells.
-
-Since we have performed integration in a previous step, we set the default assay back to 'RNA' to ensure we are using the raw counts, rather than counts transformed by integration, for our differential analysis.
-```{r}
-# We make sure the default assay is set back to "RNA" to use the original counts for DE analysis.
-DefaultAssay(seurat) <- "RNA"
-```
+In Seurat we can find the top differentially expressed genes -or markers - within each cluster. The function `FindAllMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes across all clusters. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
 
 
-```{r}
-cluster3.markers <- FindMarkers(seurat, 
-                                ident.1 = 3, 
-                                min.pct  = 0.25)
-cluster3.markers %>% head
-```
-A quick look at the top 6 lines in our differentially expressed marker gene table shows us the format of the data. We have the results of the Wilcoxon rank sum test as a p value and adjusted p value for multiple testing. We also have our average log2 fold change in expression between our clusters. The pct.1 and pct.2 columns show us the percentage of cells within the cluster the gene is expressed in (we set a minimum threshold of 20% in the function). As default, the output table is sorted by adjusted p value.
-
-A littlebit of table manipulation in `dplyr` makes the markers easier to view...
-```{r}
-cluster3.markers  %>% 
-  select(avg_log2FC, p_val, p_val_adj) %>%
-  slice_max(n = 5, order_by = avg_log2FC) 
-```
-To check our DE findings, we can visualize expression of a particular gene of interest across all clusters using the `VlnPlot()` function. This shows the expression levels of a gene (or genes) of interest within the cells across all clusters.
-
-```{r}
-VlnPlot(seurat, features = "LYZ")
-```
-We can also check which cells express our gene of interest on the UMAP image using `FeaturePlot`
-
-```{r}
-FeaturePlot(seurat, features = "LYZ")
-```
-Perhaps we are most interested in the differentially expressed genes between clusters 1 and 3
-
-```{r}
-cluster1.markers <- FindMarkers(seurat, 
-                                ident.1 = 1, 
-                                ident.2 = 3, 
-                                min.pct = 0.25)
-cluster1.markers %>% head()
-```
-... or the DE genes between clusters 1 in comparison to 3 and 4?
-```{r}
-cluster1.markers <- FindMarkers(seurat, ident.1 = 1, 
-                                ident.2 = c(3,4), # we can group clusters together!
-                                min.pct = 0.25)
-cluster1.markers %>% head()
-```
-Usually, we are wanting to find the most differentially expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. This time we will only report the positively expressed markers with a minimum log fold change of 0.25.
+Usually, we are wanting to find the most differentially expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. We will only report the positively expressed markers with a minimum log fold change of 0.25.
 
 ```{r}
 markers <- FindAllMarkers(seurat, 
@@ -123,26 +78,12 @@ markers <- FindAllMarkers(seurat,
 markers %>% head()
 ```
 
-Again, a bit of manipulation in `dplyr` enables us to get the top 5 DE genes in each cluster.
+A bit of manipulation in `dplyr` enables us to get the top 5 DE genes in each cluster.
 ```{r}
 markers %>%
   select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
     group_by(cluster) %>% # important to look in each cluster!
     slice_max(n = 5, order_by = avg_log2FC)
-```
-## Exercise
-
-<div class="exercise">
-- Use `FindMarkers` to find the differentially expressed genes in clusters 1 & 2 vs 8
-- Can you use `dplyr` to select columns of interest and order them by log fold change?
-- Use one of the visualisation tools to look at the expression of one of the top marker genes
-- Bonus! - We have not discussed the visualisation tool `RidgePlot`. See if you can use it to make another plot of one of the top marker genes. More info here - https://satijalab.org/seurat/articles/visualization_vignette.html
-</div>
-
-```{r}
-#Put exercise work in here :-)
-
-
 ```
 
 
@@ -187,7 +128,9 @@ anno_markers <- markers %>%
   dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
   left_join(anno, by = c("gene" = "SYMBOL"))
 
-anno_markers %>% head()
+anno_markers %>%  dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
+    group_by(cluster) %>% # important to look in each cluster!
+    slice_max(n = 5, order_by = avg_log2FC)
 
 ```
 At this point we might want to save our result into a nicely formatted file where we can look up our clusters, top DE genes and their gene descriptions.
@@ -213,7 +156,7 @@ CD34    CD34+,
 MS4A1   CD20+ B cells, 
 MZB1    BCMA,
 CST3    Monocytes, 
-SPN   Immature hematopoietic, 
+SPN / CD43   Immature hematopoietic, 
 HBA1    erythrocytes, 
 CD3D    T cells, 
 NKG7    NK cells
@@ -221,7 +164,7 @@ NKG7    NK cells
 
 We can assign these marker genes as a variable
 ```{r}
-cell_markers <- c("CD79A","CD34", "MS4A1", "MZB1","CST3" ,"SPN", "KIT", "HBA1", "CD3D", "NKG7")
+cell_markers <- c("CD79A","CD34", "MS4A1", "MZB1","CST3" ,"LSN", "KIT", "HBA1", "CD3D", "NKG7")
 ```
 
 Dot plots allow us to examine particular features or genes of interest across all clusters. Creating a dotplot of the cell type markers lets us assign identity based on their expression.
@@ -232,63 +175,107 @@ We can then manually create new identities for each cluster as follows.
 
 ```{r}
 new.cluster.ids <- c("T Cells", #0
-                     "T Cells", #1
-                     "Erythrocytes", #2  
-                     "Monocytes",  #3
-                     "B Cells", #4
-                     "CD34+", #5
+                     "Erythrocytes", #1  
+                     "Monocytes",  #2
+                     "B Cells", #3
+                     "CD34+", #4
+                     "NK Cells", #5
                      "B Cells", #6
-                     "NK Cells", #7
-                     "Immature hema#8topoietic", 
-                     "CD79A B cells",#9 
-                     "Monocytes", #10
-                     "CD20+ B cells", #11
-                     "BCMA", #12
-                     "Erythrocytes", #13 
-                     "BCMA") #14
+                     "Erythrocytes", #7
+                     "BCMA",#8 
+                     "Monocytes", #9
+                     "CD20+ B cells", #10
+                     "BCMA" #11
+)
+
 names(new.cluster.ids) <- levels(seurat)
 new.cluster.ids
-seurat_named <- RenameIdents(seurat, new.cluster.ids)
+seurat <- RenameIdents(seurat, new.cluster.ids)
 ```
 
 ```{r}
-DimPlot(seurat_named, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+DimPlot(seurat, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 ```
-We can check our result to the UMAP plot produced from the full dataset within the paper - not too bad! Considering we have used a subset and not followed their exact method.
+We can check our result to the UMAP plot produced from the full dataset within the paper - *not too bad!* Considering we have used a subset and not followed their exact method.
 ![](images/umaps.png)
+
+# Further explore cell type clusters
+
+At this point we may want to interrogate our newly defined cell type clusters futher. We can use `FindMarkers` to look for specific genes that are differentially expressed between known clusters
+
+```{r}
+T_cell_B_cell_markers <- FindMarkers(seurat, ident.1 = "T Cells"  , ident.2 = "B Cells")
+
+T_cell_B_cell_markers
+
+```
+
+Seurat has some nice in-built visualization tools to help us look at genes and features of interest within our cell type clusters. `VlnPlot` plots a violin plot showing the expression of a gene of interest, in this case SCIMP.
+```{r}
+VlnPlot(seurat, features="SCIMP")
+```
+
+<div class="exercise">
+
+**Exercise**
+
+1. Use `FindMarkers` to find differentially expressed marker genes between 2 other clusters of interest
+2. Pick a gene at the top of this list and use the following visualisation tools to look at its expression pattern
+ * `VlnPlot`
+ * `RidgePlot`
+ * `FeaturePlot`
+ 
+</div>
+
+```{r}
+# Put exercise work in here
+```
+<div class="information">
+Seurat has a great deal of customisability and plotting options. Fort more information look at the following vignette
+https://satijalab.org/seurat/articles/visualization_vignette
+</div>
 
 
 
 # GO term and pathway enrichment
 Sometimes we want to carry out a *Gene Enrichment Analysis* on a list of genes of interest. This enables us to find *functional terms* that are statistically over represented within a group of genes compared to a background list. `clusterProfiler` is an R package that provides statistical tests for expression analysis of terms such as GO (Gene Ontology), within gene lists that have shown statistically significant differences. 
 
-When using this tool we need to have two inputs: a list of genes that show significant differentiation in expression and a list of background genes. Hypergeometric tests are used for the statistical enrichment analysis. 
+Seurat has in-built functionality to carry out a gene enrichment analysis using another package `enrichr` this must be installed before carrying out this step. Enrichr allows users to check a list of genes, for example the ones found in a cluster, to gene set libraries of known biological function. For more information see https://maayanlab.cloud/Enrichr/#.
 
 We can check for GO terms measuring BP (biological process), CC (cell component) and MF (molecular function).
 
-First of all we need to create our test genes and background list
+
 
 ```{r}
-library(clusterProfiler)
-background <- anno %>% pull("ENTREZID")
+#install.packages(enrichr)
+library(enrichR)
+results <- DEenrichRPlot(seurat, ident.1 = "Monocytes", enrich.database = "GO_Biological_Process_2023", max.genes = 1000, num.pathway = 10)
 
-go_markers <- anno_markers %>% filter(cluster ==c(0,1)) %>% pull(ENTREZID) # Lets look at clusters (1 + 2 -  T cells)
-
-  eGO <- enrichGO(
-    gene          = go_markers,
-    universe = background, 
-    OrgDb         = org.Hs.eg.db,
-    ont           = "BP",
-    pAdjustMethod = "BH",
-    pvalueCutoff  = 0.05,
-    readable      = TRUE
-  )
-  
-head(eGO)
+results
 ```
-`clusterProfiler` also has functionality to plot pathway diagrams for us. It uses our new object created by `enrichGO` as input and highlights the pathways enriched in our dataset.
 
-```{r}plotGOgraph(eGO)
+
+
+<div class="exercise">
+**Final Exercise!**
+
+There are a number of different gene set libraries available in `enrichr` https://maayanlab.cloud/Enrichr/#libraries.
+
+1. Have a look for over representation of functional terms in a different cluster of interest (for example Erythrocytes) and check against a different database
+
+</div>
+```{r, message=FALSE}
+
+# Put exercise work in here
+
+results <- DEenrichRPlot(seurat, ident.1 = ....., enrich.database = ......, max.genes = 1000, num.pathway = 10)
+
+
+```
+
+
+```{r}
+
 ```
 
 

@@ -271,7 +271,7 @@ Before we can carry out a thorough analysis of the single cell clusters and visu
 
 ### Whats a batch effect?
 
-<div class="exercise">
+<div class="information">
 A batch effect occurs when technical factors in an experiment cause changes in the data produced by the experiment. 
 
 In this case we have two separate samples. These could have been produced in the lab on separate days by different people using different techniques, equipment etc. They could even be from **entirely different experiments**.
