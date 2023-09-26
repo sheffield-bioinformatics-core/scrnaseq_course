@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data via sctransform - regressing out unwanted sources of variation, and integrated across our datasets. Lastly, we have clustered the cells into separate groups based on the similarity of their expression profiles.
+To re-cap -  we have obtained our raw counts matrices from GEO (or cellranger). We have performed QC and subset the data according to the QC plots we generated. We have normalised the data via `SCTransform` - regressing out unwanted sources of variation, and integrated across our datasets. Lastly, we have clustered the cells into separate groups based on the similarity of their expression profiles.
 
 In the next part of the course we are going to explore the genes that show the most differences in their expression between clusters. The top genes showing the biggest change in their expression compared to the other clusters are often called *marker genes*. We can then use these marker genes to assign an *identity class* to our clusters of interest.
 
@@ -56,18 +56,20 @@ We can simply run the name of the Seurat object (in our case `seurat`) to give u
 seurat
 ```
 We can recap our clusters by taking a look at the dimensionality reduction plot - `DimPlot`
+
 ```{r}
 DimPlot(seurat, reduction = "umap")
 ```
 
 
 # Find differentially expressed genes
-Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters but no clue yet what cell types our clusters contain.
 
-In Seurat we can find the top differentially expressed genes -or markers - within each cluster. The function `FindAllMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes across all clusters. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test but other methods are available within the function. 
+Our next objective is to start assigning some *biological meaning* to our data. We have some nice clusters, but no clue yet as to what cell types our clusters describe.
+
+In Seurat we can find the top differentially-expressed genes, or *markers*, within each cluster. The function `FindAllMarkers()` handles most of the differential expression testing within the Seurat package and finds marker genes across all clusters. As a default, Seurat performs differential expression based on the non-parameteric Wilcoxon rank sum test, but other methods are available within the function. 
 
 
-Usually, we are wanting to find the most differentially expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. We will only report the positively expressed markers with a minimum log fold change of 0.25.
+Usually, we are wanting to find the most differentially-expressed genes in each cluster across the whole dataset. For this we use `FindAllMarkers`. We will only report the positively expressed markers with a minimum log fold change of 0.25.
 
 ```{r}
 markers <- FindAllMarkers(seurat, 
@@ -79,6 +81,7 @@ markers %>% head()
 ```
 
 A bit of manipulation in `dplyr` enables us to get the top 5 DE genes in each cluster.
+
 ```{r}
 markers %>%
   select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
@@ -91,7 +94,7 @@ markers %>%
 
 We may want to share our findings with collaborators or perform further bioinformatic analysis on our DE genes in clusters of interest. In this dataset, the gene level information is given as a gene name. Whilst this is useful we may want to embellish these results with some gene description information or some other gene IDs (eg Ensembl, Entrez).
 
-The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers. These are up to data databases of gene annotation that can be installed like any other bioconductor package
+The `org.Hs.eg.db` database is a genome wide annotation package for human that has many different gene mappings based on Entrez Gene identifiers. These are up-to-date databases of gene annotation that can be installed like any other bioconductor package
 
 ```{r}
 # Dont run this if you have run already!
@@ -101,13 +104,14 @@ The `org.Hs.eg.db` database is a genome wide annotation package for human that h
 library(org.Hs.eg.db)
 ```
 
-In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and entrez ID from the database.
+In our case we are going to use the gene symbols (rownames in our Seurat object) to extract the gene description and Entrez ID from the database.
 
 We are going to filter the database by a key or set of keys in order to extract the information we want. Valid names for the key can be retrieved with the `keytypes` function.
 
 ```{r}
 keytypes(org.Hs.eg.db)
 ```
+
 We are going to use the keytype 'SYMBOL' which designates the gene names that we have in our rownames of the Seurat object.
 
 Unfortunately, the authors of `dplyr` and `AnnotationDbi` have both decided to use the name `select` in their packages. To avoid confusion and problems from packages attempting to use the wrong tool, the following code is sometimes used:-
@@ -122,7 +126,9 @@ anno <- AnnotationDbi::select(org.Hs.eg.db,
 # Check it worked!
 head(anno)  
 ```
+
 Now we can combine our annotation table to our marker genes using `dplyr` and `left_join`
+
 ```{r}
 anno_markers <- markers %>% 
   dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
@@ -133,6 +139,7 @@ anno_markers %>%  dplyr::select(gene, cluster, avg_log2FC, p_val, p_val_adj) %>%
     slice_max(n = 5, order_by = avg_log2FC)
 
 ```
+
 At this point we might want to save our result into a nicely formatted file where we can look up our clusters, top DE genes and their gene descriptions.
 
 ```{r}
@@ -167,7 +174,9 @@ We can assign these marker genes as a variable
 cell_markers <- c("CD79A","CD34", "MS4A1", "MZB1","CST3" ,"LSN", "KIT", "HBA1", "CD3D", "NKG7")
 ```
 
+
 Dot plots allow us to examine particular features or genes of interest across all clusters. Creating a dotplot of the cell type markers lets us assign identity based on their expression.
+
 ```{r}
 DotPlot(seurat, features = cell_markers) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
@@ -201,7 +210,7 @@ We can check our result to the UMAP plot produced from the full dataset within t
 
 # Further explore cell type clusters
 
-At this point we may want to interrogate our newly defined cell type clusters futher. We can use `FindMarkers` to look for specific genes that are differentially expressed between known clusters
+At this point we may want to interrogate our newly defined cell type clusters futher. We can use `FindMarkers` to look for specific genes that are differentially-expressed between clusters that represent biological conditions we might want to compare
 
 ```{r}
 T_cell_B_cell_markers <- FindMarkers(seurat, ident.1 = "T Cells"  , ident.2 = "B Cells")
@@ -211,6 +220,7 @@ T_cell_B_cell_markers
 ```
 
 Seurat has some nice in-built visualization tools to help us look at genes and features of interest within our cell type clusters. `VlnPlot` plots a violin plot showing the expression of a gene of interest, in this case SCIMP.
+
 ```{r}
 VlnPlot(seurat, features="SCIMP")
 ```
@@ -229,26 +239,32 @@ VlnPlot(seurat, features="SCIMP")
 
 ```{r}
 # Put exercise work in here
+
+
 ```
+
 <div class="information">
-Seurat has a great deal of customisability and plotting options. Fort more information look at the following vignette
+Seurat has a great deal of customisability and plotting options. For more information look at the following vignette
 https://satijalab.org/seurat/articles/visualization_vignette
 </div>
 
 
 
 # GO term and pathway enrichment
-Sometimes we want to carry out a *Gene Enrichment Analysis* on a list of genes of interest. This enables us to find *functional terms* that are statistically over represented within a group of genes compared to a background list. `clusterProfiler` is an R package that provides statistical tests for expression analysis of terms such as GO (Gene Ontology), within gene lists that have shown statistically significant differences. 
 
-Seurat has in-built functionality to carry out a gene enrichment analysis using another package `enrichr` this must be installed before carrying out this step. Enrichr allows users to check a list of genes, for example the ones found in a cluster, to gene set libraries of known biological function. For more information see https://maayanlab.cloud/Enrichr/#.
+We often want to carry out a *Gene Enrichment Analysis* on a list of genes of interest. This enables us to find *functional terms* that are statistically over-represented within a group of genes compared to a background list. 
+
+Seurat has in-built functionality to carry out a gene enrichment analysis using the `enrichr` package, which must be installed before carrying out this step. 
+
+`enrichr` allows users to check a list of genes, for example the ones found in a cluster, to gene set libraries of known biological function. For more information see https://maayanlab.cloud/Enrichr/#.
 
 We can check for GO terms measuring BP (biological process), CC (cell component) and MF (molecular function).
-
 
 
 ```{r}
 #install.packages(enrichr)
 library(enrichR)
+
 results <- DEenrichRPlot(seurat, ident.1 = "Monocytes", enrich.database = "GO_Biological_Process_2023", max.genes = 1000, num.pathway = 10)
 
 results

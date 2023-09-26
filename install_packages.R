@@ -5,4 +5,5 @@ BiocManager::install(c("Seurat",
                        "clusterProfiler",
                        "topGO",
                        "Rgraphviz",
-                       "rmarkdown"))
+                       "rmarkdown",
+                        "enrichr"))
