@@ -55,7 +55,7 @@ library(tidyverse)
 
 ```{r}
 #Reload R objects if needed
-seurat_data <- readRDS("Robjects/seurat_filtered_BACKUP.RDS")
+seurat <- readRDS("Robjects/seurat_filtered_BACKUP.RDS")
 ```
 
 Our end goal is to identify groups of cells that show interesting biological variation. However at the moment our data contains lots of potentially **unwanted variation** and **noise**. We have expression of many genes across many cells in multiple samples! This is an example of *high dimensional data*.
@@ -74,9 +74,9 @@ First of all we want to be able to compare gene expression between cells, do do 
 
 ```{r}
 # We use the $ operator to show us some of the information stored in the 'seurat data' object
-#seurat_data$ tab will show you the list
+#seurat$ tab will show you the list
   
-summary(seurat_data$nCount_RNA)
+summary(seurat$nCount_RNA)
 ```
 
 We can use the `NormalizeData` function to use log normalisation to take the sequencing depth into account. 
@@ -84,7 +84,7 @@ We can use the `NormalizeData` function to use log normalisation to take the seq
 Briefly, this normalises the gene expression measurements for each cell by the total expression, multiplies this by a scale factor, and log-transforms the result. Now we can directly compare expression between cells.
 
 ```{r}
-seurat_data <- NormalizeData(seurat_data)
+seurat <- NormalizeData(seurat)
 
 ```
 
@@ -96,16 +96,16 @@ We find features that define clusters, using the `FindVariableFeatures` function
 
 ```{r}
 # Identify the most variable genes
-seurat_data <- FindVariableFeatures(seurat_data)
+seurat <- FindVariableFeatures(seurat)
 
 # Identify the top 20 most highly variable genes. We need the VariableFeatures function to pull the names
-top20 <- head(VariableFeatures(seurat_data), 20)
+top20 <- head(VariableFeatures(seurat), 20)
 top20
 ```
 
 ```{r}
 # Plot the variable features
-VarPlot<- VariableFeaturePlot(seurat_data, )
+VarPlot<- VariableFeaturePlot(seurat, )
 LabelPoints(plot = VarPlot, points = top20, repel = TRUE)
 
 ```
@@ -114,7 +114,7 @@ LabelPoints(plot = VarPlot, points = top20, repel = TRUE)
 The next step is to scale the data - which applies a linear transformation to the data that is a standard pre-processing step prior to dimensional reduction techniques like PCA. It stops highly expressed genes dominating the analysis.
 
 ```{r}
-seurat_data <- ScaleData(seurat_data)
+seurat <- ScaleData(seurat)
 ```
 
 Now the data is pre-processed and ready for us to move onto the dimensionality reduction techniques.
@@ -138,7 +138,7 @@ The good news is that, despite the complex mathematics going-on behind the scene
 
 ```{r, message=TRUE}
 # Perform PCA
-seurat_data <- RunPCA(seurat_data)
+seurat <- RunPCA(seurat)
 ```
 The command prints out some information on the **principal components** ie PC_1, PC_1 and groups the genes that are behaving similarly. PC1 representing the most variation in the data and PC2 representing the second most variation in the data
 
@@ -147,7 +147,7 @@ The command prints out some information on the **principal components** ie PC_1,
 We can see how much variance is explained by each principal component by using the`ElbowPlot` function. The point at which the plot starts to level out is usually taken as guidance for the number of principal components to use in the analysis.
 
 ```{r}
-ElbowPlot(seurat_data, reduction = "pca", ndims = 50)
+ElbowPlot(seurat, reduction = "pca", ndims = 50)
 ```
 
 Looking at the above 'elbow plot', we can see that the top 9 PCs contain a lot of the information, while other PCs contain progressively less. However, it is still advisable to use more PCs in further analysis since they might contain information about rare cell types.
@@ -156,7 +156,7 @@ Looking at the above 'elbow plot', we can see that the top 9 PCs contain a lot o
 We can look at the most variable genes driving the PCA:
 
 ```{r}
-print(x = seurat_data[["pca"]], 
+print(x = seurat[["pca"]], 
       dims = 1:5, #Top 5 PCs 
       nfeatures = 5) #Top 5 Genes
 ```
@@ -172,9 +172,9 @@ To do that we need to use a Seurat function called `DimPlot` . This is short for
 In this case we have done a PCA and we can look at the first two principal components. By default, cells are colored by their identity class (this can be changed with the `group.by` parameter).
 
 ```{r}
-DimPlot(seurat_data ,reduction = "pca")
+DimPlot(seurat ,reduction = "pca")
 
-DimPlot(seurat_data ,reduction = "pca", group.by = "SampleName")
+DimPlot(seurat ,reduction = "pca", group.by = "SampleName")
 
 ```
 
@@ -209,25 +209,25 @@ If you are interesting in cell cycle marker genes from organisms these can be fo
 We can now use the `CellCycleScoring` function in Seurat to 'score' or identify each cell's cell cycle phase based on the expression of these genes within that cell.
 
 ```{r}
-seurat_data <- CellCycleScoring(seurat_data, 
+seurat <- CellCycleScoring(seurat, 
                                  g2m.features = g2m.genes, 
                                  s.features = s.genes)
 
                               
-seurat_data@meta.data %>% select(S.Score, G2M.Score, Phase)
+seurat@meta.data %>% select(S.Score, G2M.Score, Phase)
 ```
 
 ## MD - Useful to plot this as a scatter plot?
 
 ```{r}
-seurat_data@meta.data %>% select(S.Score, G2M.Score, Phase) %>% 
+seurat@meta.data %>% select(S.Score, G2M.Score, Phase) %>% 
   ggplot(aes(x = S.Score, y = G2M.Score, col = Phase)) + geom_point()
 ```
 
 We now have 3 new columns in our metadata. The highest score between S.Score and G2M.Score determines the phase. If both columns are negative, then the phase is G1. A bar plot shows us how many cells are in each phase. 
 
 ```{r}
-as_tibble(seurat_data[[]]) %>% ggplot(aes(x = Phase, fill = Phase))+ geom_bar()
+as_tibble(seurat[[]]) %>% ggplot(aes(x = Phase, fill = Phase))+ geom_bar()
 ```
 
 <div class="exercise">
@@ -249,9 +249,9 @@ Mitochondrial genes expression can also be a big contributor of variation. To vi
 
 ```{r}
 # Categorize the % of mitochondrial genes expressed in cells into low, medium and high
-seurat_data$mito.cat <- cut(seurat_data$mito.ratio, breaks = 3, labels=c("Low","Medium", "High"))
+seurat$mito.cat <- cut(seurat$mito.ratio, breaks = 3, labels=c("Low","Medium", "High"))
 
-DimPlot(seurat_data,  reduction = "pca",  group.by= "mito.cat")
+DimPlot(seurat,  reduction = "pca",  group.by= "mito.cat")
 
 ```
 
@@ -268,7 +268,7 @@ It is a separate and more statistically robust version of the steps we have done
 
 
 ```{r}
-seurat_split <- SplitObject(seurat_data, split.by = "SampleName")
+seurat_split <- SplitObject(seurat, split.by = "SampleName")
 
 seurat_split$PBMMC_1 <- SCTransform(seurat_split$PBMMC_1, vars.to.regress = c("mito.ratio","S.Score","G2M.Score"), vst.flavor = "v1" , verbose = F)
 
