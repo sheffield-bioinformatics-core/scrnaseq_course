@@ -48,7 +48,7 @@ install.packages("Seurat")
 ```
 
 <div class="warning">
-NOTE: Seurat is in the process of being upgraded from Seurat 4 to Seurat 5. This is a major package upgrade expected to be complete in **October 2023**. For the purposes of this course we will continue with Seurat 4 until Seurat 5 is fully released. For more information click [here](https://satijalab.org/seurat/articles/get_started_v5).
+NOTE: Seurat is in the process of being upgraded from Seurat 4 to Seurat 5. This is a major package upgrade expected to be complete in **October 2023**. For the purposes of this course we will continue with Seurat 4. This workflow will be compatable with the Seurat 5 upgrade. For more information click [here](https://satijalab.org/seurat/articles/get_started_v5).
 </div>
 
 # Data Import
@@ -102,7 +102,7 @@ seurat_obj@meta.data %>% head
 ******
 ******
 
-#### Exercise
+#### Exercise 
 <div class="exercise">
 - Use to sampleSheet to determine the directory containing data from the second healthy individual (`PBMMC_2`).
 - Use the `Read10X` and `CreateSeuratObject` functions to import the data from this sample, and save as a new variable (`seurat_obj2` for example)

@@ -41,8 +41,8 @@ In this Session, we are going to normalise the data, select the genes/features t
 
 ![](images/flowchart2.png)
 
-
-# Sources of variation
+# Pre-processing
+## Sources of variation
 
 Firstly, lets load in our data from the first session if we haven't got it already loaded.
 
@@ -117,7 +117,7 @@ The next step is to scale the data - which applies a linear transformation to th
 seurat_data <- ScaleData(seurat_data)
 ```
 
-
+Now the data is pre-processed and ready for us to move onto the dimensionality reduction techniques.
 
 # PCA
 
@@ -262,7 +262,7 @@ We decide to **regress** for mitochondrial ratio and cell-cycle status. This pre
 
 We need to do this for each sample separately (i.e. not the merged dataset), so first we "split" the object into a list of subsetted objects.
 
-`SCTransform` is a newer addition to the `Seurat` package. It allows us to do the data normalisation, data scaling & finding of variable features in one simple step. 
+`SCTransform` is a newer addition to the `Seurat` package. It allows us to do all the pre-processing - the data normalisation, data scaling & finding of variable features in one simple step. 
 
 It is a separate and more statistically robust version of the steps we have done above. Importantly it allows us to regress out any sources of variation we have found in the above steps.
 
@@ -417,7 +417,7 @@ DimPlot(seurat_integrated)
 
 ```
 
-We should start to see an organised **structuring** or our data now. The cells are starting to form visual **clusters** and **groupings**. We will be able to define these clusters in the next steps.
+We should start to see an organised **structuring** or our data now. The cells are starting to form visual **clusters** and **groupings**. We will be able to formally define these clusters in the next steps.
 
 ## Feature Plots 
 
