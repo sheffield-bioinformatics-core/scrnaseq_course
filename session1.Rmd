@@ -47,13 +47,9 @@ install.packages("tidyverse")
 install.packages("Seurat")
 ```
 
-<div class="warning">
-NOTE: Seurat is in the process of being upgraded from Seurat 4 to Seurat 5. This is a major package upgrade expected to be complete in **October 2023**. For the purposes of this course we will continue with Seurat 4. This workflow will be compatable with the Seurat 5 upgrade. For more information click [here](https://satijalab.org/seurat/articles/get_started_v5).
-</div>
-
 # Data Import
 
-We start by importing the sample information for the dataset into R. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
+We start by importing the sample information for the dataset. The `sampleSheet` data frame contains information about each of the samples in the dataset; which GEO Accession ID (GSE) they correspond to, and the disease status of the sample.
 
 ```{r}
 sampleSheet <- read.delim("GSE132509/meta_data.tsv")
@@ -69,14 +65,15 @@ We are going to import the data for the first healthy sample - `GSM3872442` The 
 list.files("GSE132509/GSM3872442/")
 ```
 
-It is then a two-step process to create a object that `Seurat` can use for analysis. An *object* is an R data structure that Seurat uses to organise our single cell data.
+It is then a two-step process to create a object that `Seurat` can use for analysis.
 
 ```{r}
 ## Read all the files into a 'sparse matrix'
 seurat_data <- Read10X(data.dir = "GSE132509/GSM3872442")
 ## convert into Seurat object type for further analysis
 seurat_obj <- CreateSeuratObject(counts = seurat_data, 
-                                 min.features = 100, 
+                                 min.features = 100, ### Cells must have this many genes measured
+                                 min.cells = 10, ### Genes must be present in this many cells
                                  project = "PBMMC_1")
 seurat_obj
 ```
@@ -102,7 +99,7 @@ seurat_obj@meta.data %>% head
 ******
 ******
 
-#### Exercise 
+#### Exercise
 <div class="exercise">
 - Use to sampleSheet to determine the directory containing data from the second healthy individual (`PBMMC_2`).
 - Use the `Read10X` and `CreateSeuratObject` functions to import the data from this sample, and save as a new variable (`seurat_obj2` for example)
@@ -120,6 +117,8 @@ merged_data <- merge(seurat_obj,seurat_obj2)
 ## create a directory to store the Robjects
 dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
+
+saveRDS(merged_data, file = "Robjects/merged_data_BACKUP.RDS")
 ```
 
 If you didn't manage to complete this exercise, the output is available in the course folder.
@@ -229,7 +228,7 @@ We can now look at the relationship between the number of UMI and number of gene
 ```
 
 ![](images/uMI_vs_gene.png)
-# EMILY- REMINDER DO WE NEED THE BELOW NOVELTY SCORING?
+
 
 We would ideally like each cell to be measuring as many genes as possible. We can assess this by defining a *novelty* score as the ratio between the `nGene` and `nUMI` quantities. If this score is low for a particular cell it means that there is not a wide variety of genes that have been sequenced in the cell. Even though the `nUMI` might be high for such cells, the same genes have been sequenced repeatedly. Using `dplyr` and `ggplot2` we can add this new score and visualise it's distribution. **The score is expected to be around 0.8 for good quality cells**
 
@@ -318,70 +317,6 @@ saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
 rm(merged_data)
 ```
 
-
-## Gene filtering
-
-By this stage we have identified, and removed, any potentially unreliable *cells* from our dataset. We still have the issue of many zero counts in the data. In technical terms we say that the data are *sparse*. In presence of these zero values will affect the average expression for a given cell (which is used for normalisation). Genes with too many zero entries are going to add to the noise in our dataset and not be informative. 
-
-
-```{r}
-# Extract the counts from our filtered object
-counts <- GetAssayData(object = filtered_data, slot = "counts")
-
-# create a matrix of TRUE/FALSE to indicate whether particular gene is non-zero in a given sample
-nonzero <- counts > 0
-
-```
-Each row of the `nonzero` contains a series of 0 of 1 depending on whether that gene is non-zero in that sample. Since logical (`TRUE`/`FALSE`) values can also be treated as 0 or 1, the sum of a given row will be how many samples that gene is non-zero in
-
-```{r}
-## this gene is zero in all samples
-table(nonzero[1,])
-sum(nonzero[1,])
-
-## this gene (picked arbitarily) is nonzero in 43 samples
-table(nonzero[21,])
-sum(nonzero[21,])
-```
-
-```{r}
-rs <- rowSums(nonzero)
-rs[1]
-rs[21]
-```
-We can tabulate the row sums to get an idea of the distribution. From this we can see that a large number of genes are zero in all cells. These clearly correspond to some of the genes that we want to remove.
-
-```{r}
-data.frame(RowSum = rs) %>% 
-  count(RowSum)
-```
-
-
-We choose to pick genes that are **nonzero in 10 or more cells** and create a new count matrix. However, since `Seurat` requires more complex data than just a counts matrix we have to create a seurat object as before. The meta data for this new object can be the same as our filtered object (since we have just removed *genes* from the dataset and not *cells*).
-
-```{r}
-## keep_genes will be TRUE or FALSE depending on if a gene is nonzero in at least 10 samples
-keep_genes <-rowSums(nonzero) >= 10
-
-## make new count matrix by selecting only rows where keep_genes is TRUE
-filtered_counts <- counts[keep_genes, ]
-
-## make a new Seurat object
-filtered_data <- CreateSeuratObject(filtered_counts, meta.data = filtered_data@meta.data)
-
-
-# EMILY NOTE - CAN CAN DO THIS EASIER BELOW?
-#CreateSeuratObject(min.cells = 10)
-
-```
-
-
-
-
-
-```{r}
-saveRDS(filtered_data, file = "Robjects/seurat_filtered.RDS")
-```
 
 
 # Appendix 
