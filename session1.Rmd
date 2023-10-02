@@ -85,13 +85,10 @@ Note that we tend to look at summaries or plots of the data rather than the raw 
 ```{r}
 ## each row is a gene, each column is a sample
 GetAssayData(seurat_obj, "counts")[1:10,1:2]
+seurat_obj@meta.data
 ```
 
 The "meta-data" in the object is used to record any QA data that we generate or other grouping information related to the samples (cells). We will see how to add to this data frame later. For now it contains the number of UMI (`nCount_RNA`) and genes (`nFeature_RNA`) detected in each cell. The `orig.ident` is used to identify which biological sample each cell originates from. It will be possible to store multiple samples in this object, as we will see in the following exercise.
-
-```{r}
-seurat_obj@meta.data %>% head
-```
 
 
 
