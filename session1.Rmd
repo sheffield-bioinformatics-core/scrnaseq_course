@@ -114,8 +114,6 @@ merged_data <- merge(seurat_obj,seurat_obj2)
 ## create a directory to store the Robjects
 dir.create("Robjects",showWarnings = FALSE)
 saveRDS(merged_data, file = "Robjects/merged_data.RDS")
-
-saveRDS(merged_data, file = "Robjects/merged_data_BACKUP.RDS")
 ```
 
 If you didn't manage to complete this exercise, the output is available in the course folder.
