@@ -217,7 +217,7 @@ seurat <- CellCycleScoring(seurat,
 seurat@meta.data %>% select(S.Score, G2M.Score, Phase)
 ```
 
-## MD - Useful to plot this as a scatter plot?
+A scatter plot can be used to understand how the Phase categories are assigned based on the scores
 
 ```{r}
 seurat@meta.data %>% select(S.Score, G2M.Score, Phase) %>% 
