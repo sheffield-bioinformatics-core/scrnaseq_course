@@ -175,7 +175,7 @@ View(qc_data)
 
 ### Number of cells per-sample
 
-The number of cells for each sample can be informative - especially if we have some idea about how many cells to expect as part of the experimental protocol. We can make a barplot using a `geom_bar`. Using the `SampleName` as our `x` aesthetic will automatically put the number of occurences of that name on the `y` aesthetic (hence we do not need to specify a `y` value inside `aes`. Since the sample group information is contained in the `qc_data` data frame we can also colour by the `SampleGroup` to see if there is any underlying difference.
+The number of cells for each sample can be informative - especially if we have some idea about how many cells to expect as part of the experimental protocol. We can make a barplot using a `geom_bar`. Using the `SampleName` as our `x` aesthetic will automatically put the number of occurrences of that name on the `y` aesthetic (hence we do not need to specify a `y` value inside `aes`. Since the sample group information is contained in the `qc_data` data frame we can also colour by the `SampleGroup` to see if there is any underlying difference.
 
 ```{r}
 qc_data %>% 
@@ -274,7 +274,7 @@ qc_data %>%
   count(kept_in_analysis)
 ```
 
-We can also overlay this information on the plot of `nUMI` vs `nGene` to see if we have been sucessful in removing most of the outlier points.
+We can also overlay this information on the plot of `nUMI` vs `nGene` to see if we have been successful in removing most of the outlier points.
 
 ```{r}
 qc_data %>% 
@@ -420,7 +420,8 @@ However, the previous code would over-write the Seurat object at each iteration.
 seurat_list <- NULL
 
 # Create a Seurat object for each sample
-for (i in 1:length(dirs)){
+# Assume we have already read the first sample, and loop over the remainder
+for (i in 2:length(dirs)){
         the_data_dir <- dirs[i]
         project_name <- samples[i]
         
