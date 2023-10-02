@@ -421,7 +421,11 @@ seurat_list <- NULL
 
 # Create a Seurat object for each sample
 # Assume we have already read the first sample, and loop over the remainder
-for (i in 2:length(dirs)){
+
+dirs <- dirs[-1]
+samples <- samples[-1]
+
+for (i in 1:length(dirs)){
         the_data_dir <- dirs[i]
         project_name <- samples[i]
         
